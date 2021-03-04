@@ -11,13 +11,16 @@ client = discord.Client()
 
 # String constants that give info
 help_string = '''
-$Help - Gets you help (this)
+$help - Gets you help (this)
+$hello - Says hello to you
 '''
 welcome = '''
 Ummm. Thanks for installing ig?
 Um
 My creator forced me to post this here:
 https://youtu.be/dQw4w9WgXcQ
+Um
+You can get help using '$help'
 '''
 
 
@@ -70,5 +73,8 @@ async def on_message(message):
                                    delete_after =2)
 
         await message.channel.send('Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'$help\' to get help')
+
+    if message.content.startswith('$help'):
+        await message.channel.send(help_string)
 client.run(DISCORD_KEY)
 
