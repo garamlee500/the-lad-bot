@@ -1,3 +1,10 @@
+# Discord Key
+discordKey.txt
+
+#vs code
+
+.vs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
