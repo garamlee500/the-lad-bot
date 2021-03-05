@@ -96,7 +96,7 @@ async def on_message(message):
     message_tuple = (message.author.id,message.guild.id)
 
     # once minute passes reset
-    if time_last_minute_message_senders_reset -time.time()> 60:
+    if time.time() - time_last_minute_message_senders_reset> 60:
         last_minute_message_senders = []
         time_last_minute_message_senders_reset = time.time()
 
