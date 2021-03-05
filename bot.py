@@ -1,6 +1,10 @@
 import discord
 from datetime import datetime
+from database_accessor import database
+import time 
+from random import randint
 
+my_database = database()
 # open discordKey.txt and extract discord bot key
 file = open('discordKey.txt','r')
 DISCORD_KEY = file.readlines()[0]
@@ -23,6 +27,12 @@ Um
 You can get help using '$help'
 '''
 
+#list of current users who have accessed the bot xp in the last minute
+last_minute_message_senders = []
+time_last_minute_message_senders_reset = time.time()
+
+# list of level requirements
+level_xp_requirements = [0,100]
 
 @client.event
 # When the bot is ready
@@ -50,6 +60,11 @@ async def on_guild_join(guild):
 # When bot receives message
 @client.event
 async def on_message(message):
+
+    global last_minute_message_senders
+    global time_last_minute_message_senders_reset
+    global level_xp_requirements
+    global my_database
     # if the message sender is the bot, just return
     if message.author == client.user:
         return
@@ -76,5 +91,50 @@ async def on_message(message):
 
     if message.content.startswith('$help'):
         await message.channel.send(help_string)
+
+    # get user id and guild id
+    message_tuple = (message.author.id,message.guild.id)
+
+    # once minute passes reset
+    if time_last_minute_message_senders_reset -time.time()> 60:
+        last_minute_message_senders = []
+        time_last_minute_message_senders_reset = time.time()
+
+    # if message not sent in last minute
+    if not message_tuple in last_minute_message_senders:
+        # add to people who sent message in the last minute
+        last_minute_message_senders.append(message_tuple)
+
+        my_database.add_xp(randint(15,20),message.author.id,message.guild.id)
+
+    
+    if message.content.startswith('$rank'):
+        current_xp = my_database.get_xp(message.author.id,message.guild.id)
+        # if level requirements haven't been created
+
+        while level_xp_requirements[-2] <= current_xp:
+
+            # formula
+            current_level_squared = ((len(level_xp_requirements) -1)**2)
+            current_level = (len(level_xp_requirements) -1)
+
+            level_xp_requirements.append(5*current_level_squared + 50 * current_level +100 + level_xp_requirements[-1])
+
+            current_level_squared = ((len(level_xp_requirements) -1)**2)
+            current_level = (len(level_xp_requirements) -1)
+
+            level_xp_requirements.append(5*current_level_squared + 50 * current_level +100 + level_xp_requirements[-1])
+
+        for i in range(len(level_xp_requirements)):
+            current_level_number = i
+
+            if level_xp_requirements[i+1] >= current_xp:
+                break
+
+        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements[current_level_number+1] - level_xp_requirements[current_level_number]
+        xp_on_current_level = current_xp - level_xp_requirements[current_level_number]
+
+        await message.channel.send(f"You currently have {current_xp} total xp.\nYou are currently on level {current_level_number}. You are currently {xp_on_current_level}/{total_xp_to_go_from_current_level_to_next_level}xp to reach level {current_level_number+1}")
+
 client.run(DISCORD_KEY)
 
