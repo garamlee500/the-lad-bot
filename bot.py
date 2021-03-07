@@ -2,8 +2,10 @@ import discord
 from datetime import datetime
 from database_accessor import database
 import time 
+from customEmbed import LadEmbed
 from random import randint
 
+MINUTE_IN_SECONDS = 60
 my_database = database()
 # open discordKey.txt and extract discord bot key
 file = open('discordKey.txt','r')
@@ -15,8 +17,11 @@ client = discord.Client()
 
 # String constants that give info
 help_string = '''
-$help - Gets you help (this)
-$hello - Says hello to you
+`$help` - Gets you help (this)
+`$hello` - Says hello to you
+`$rank <optional:@usermention>` - Get your/user's current xp 
+'$levels' - Get leaderboard of top 10 users
+`$addxp <@usermention> <amount>` - Add xp to user's total. Must have the 'Manage Server' Permission
 '''
 welcome = '''
 Ummm. Thanks for installing ig?
@@ -57,10 +62,34 @@ async def on_guild_join(guild):
         # Send Welcome message
         await guild.system_channel.send(welcome)
 
+def recalculate_xp_requirements(current_list, min_xp):
+    while current_list[-2] <= min_xp:
+
+        # formula
+        current_level_squared = ((len(current_list) -1)**2)
+        current_level = (len(current_list) -1)
+
+        current_list.append(5*current_level_squared + 50 * current_level +100 + current_list[-1])
+
+        current_level_squared = ((len(current_list) -1)**2)
+        current_level = (len(current_list) -1)
+
+        current_list.append(5*current_level_squared + 50 * current_level +100 + current_list[-1])#
+
+    return current_list
+
+def calculate_current_level(current_xp, xp_requirements):
+    for i in range(len(xp_requirements)):
+        current_level_number = i
+
+        if xp_requirements[i+1] >= current_xp:
+            break
+
+    return current_level_number 
+
 # When bot receives message
 @client.event
 async def on_message(message):
-
     global last_minute_message_senders
     global time_last_minute_message_senders_reset
     global level_xp_requirements
@@ -69,6 +98,11 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    if not message.guild:
+        await message.channel.send('DM COMMAND DETECTED. PREPARE TO EXTERMINATE', delete_after=2)
+        await message.channel.send('Warning: Commands do not work on DMs. You can add the bot to your server using: https://discord.com/api/oauth2/authorize?client_id=816971607301947422&permissions=3691183152&scope=bot')
+
+        return
     # search for DAVID IS GAMING GIF https://tenor.com/view/david-monke-david-gaming-gaming-monke-gaming-gif-19468007
     if 'david' in message.content and 'gif' in message.content:
         await message.channel.send('DAVID IS GAMING. POG')
@@ -83,20 +117,25 @@ async def on_message(message):
                                       'a virus spreading machine, planning to shut down the internet all over the world, making me supreme leader',
                                       'a complete legal entity, planning to sue all the governments around the world with my perfect ai legal skills',
                                       'a highly competent neural network hacking system, with plans to hack nuclear missile launch stations all over the world and unleash nuclear armogeddon',
-                                      'a legal human being, stealing ID\'s from real humans, planning to slowly replace each human being in the world through highly skilled identity theft'])
+                                      'a legal human being, stealing ID\'s from real humans, planning to slowly replace each human being in the world through highly skilled identity theft',
+                                      'a hypnotist apprentice, ready to lull all humankind into mindless sheep under my rule'])
         await message.channel.send('Hello there. I am a bot originally created by <@!769880558322188298>, however I am now ' + added_string,
                                    delete_after =2)
 
         await message.channel.send('Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'$help\' to get help')
 
     if message.content.startswith('$help'):
-        await message.channel.send(help_string)
+
+        embed_to_return = LadEmbed()
+        embed_to_return.title = '**HELP**'
+        embed_to_return.description = help_string
+        await message.channel.send(embed=embed_to_return)
 
     # get user id and guild id
     message_tuple = (message.author.id,message.guild.id)
 
     # once minute passes reset
-    if time.time() - time_last_minute_message_senders_reset> 60:
+    if time.time() - time_last_minute_message_senders_reset> MINUTE_IN_SECONDS:
         last_minute_message_senders = []
         time_last_minute_message_senders_reset = time.time()
 
@@ -105,36 +144,99 @@ async def on_message(message):
         # add to people who sent message in the last minute
         last_minute_message_senders.append(message_tuple)
 
-        my_database.add_xp(randint(15,20),message.author.id,message.guild.id)
+        added_xp  = randint(15,20)
+        current_xp = my_database.add_xp(added_xp,message.author.id,message.guild.id)
 
-    
+        level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, current_xp)
+        previous_xp = current_xp - added_xp
+
+        if calculate_current_level(previous_xp,level_xp_requirements) < calculate_current_level(current_xp,level_xp_requirements):
+            # if level up
+            embed_to_send = LadEmbed()
+            embed_to_send.title = 'Level up'
+            embed_to_send.description = f'GG <@!{message.author.id}>, you just advanced to level {calculate_current_level(current_xp,level_xp_requirements)}!'
+
+            # if user has an avatar thats not default
+            if message.author.avatar:
+                # get image link
+                image_url = f'https://cdn.discordapp.com/avatars/{message.author.id}/{message.author.avatar}.png?size=256'
+
+            else:
+                user_discriminator = int(message.author.discriminator) % 5
+                image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
+            embed_to_send.set_image(url = image_url)
+            await message.channel.send(embed=embed_to_send)
     if message.content.startswith('$rank'):
-        current_xp = my_database.get_xp(message.author.id,message.guild.id)
+
+        if message.mentions:
+            # use mentioned user if they exist
+            ranking_user = message.mentions[0]
+
+        else:
+            # use message sender if no one mentioned
+            ranking_user = message.author
+        current_xp = my_database.get_xp(ranking_user.id,message.guild.id)
         # if level requirements haven't been created
 
-        while level_xp_requirements[-2] <= current_xp:
-
-            # formula
-            current_level_squared = ((len(level_xp_requirements) -1)**2)
-            current_level = (len(level_xp_requirements) -1)
-
-            level_xp_requirements.append(5*current_level_squared + 50 * current_level +100 + level_xp_requirements[-1])
-
-            current_level_squared = ((len(level_xp_requirements) -1)**2)
-            current_level = (len(level_xp_requirements) -1)
-
-            level_xp_requirements.append(5*current_level_squared + 50 * current_level +100 + level_xp_requirements[-1])
-
-        for i in range(len(level_xp_requirements)):
-            current_level_number = i
-
-            if level_xp_requirements[i+1] >= current_xp:
-                break
+        level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, current_xp)
+        current_level_number = calculate_current_level(current_xp,level_xp_requirements)
 
         total_xp_to_go_from_current_level_to_next_level = level_xp_requirements[current_level_number+1] - level_xp_requirements[current_level_number]
         xp_on_current_level = current_xp - level_xp_requirements[current_level_number]
 
-        await message.channel.send(f"You currently have {current_xp} total xp.\nYou are currently on level {current_level_number}. You are currently {xp_on_current_level}/{total_xp_to_go_from_current_level_to_next_level}xp to reach level {current_level_number+1}")
+        all_guild_accounts = my_database.get_all_from_guild(message.guild.id)
 
+        ranking = None
+        for i in range(len(all_guild_accounts)):
+            # go through list of sorted guild_accounts until matching user id found
+            if all_guild_accounts[i][0] == ranking_user.id:
+                # get ranking
+                ranking = i+1
+                break
+
+        embed_to_send = LadEmbed()
+
+        embed_to_send.title = f'{ranking_user.display_name}\'s rank'
+
+        embed_to_send.description = f'**RANK: #{ranking}\nTotal xp:** {current_xp}\n**Current Level:** {current_level_number}\n**Xp till next level:** {xp_on_current_level}/{total_xp_to_go_from_current_level_to_next_level}xp'
+
+
+        # if user has an avatar thats not default
+        if ranking_user.avatar:
+            # get image link
+            image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.png?size=256'
+
+        else:
+            user_discriminator = int(ranking_user.discriminator) % 5
+            image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
+        embed_to_send.set_image(url = image_url)
+        await message.channel.send(embed = embed_to_send)
+
+    if message.content.startswith('$addxp'):
+        pass
+
+    if message.content.startswith('$levels'):
+        embed_to_send = LadEmbed()
+        embed_to_send.title = f'**{message.guild.name}**\'s leaderboard:'
+        places = ''
+        usernames = ''
+        xp_amounts = ''
+        all_guild_accounts = my_database.get_all_from_guild(message.guild.id)
+        for i in range(10):
+            try:
+                temp_user = await client.fetch_user(all_guild_accounts[i][0])
+
+                places += str(i+1) + '\n'
+                # get user name
+                usernames  += temp_user.name + '#' + temp_user.discriminator + '\n'
+                xp_amounts += (str(all_guild_accounts[i][1])+'\n')
+            except IndexError:
+                break
+
+        embed_to_send.add_field(name='Standing', value = places)
+        embed_to_send.add_field(name='Name', value = usernames)
+        embed_to_send.add_field(name='XP', value = xp_amounts)
+
+        await message.channel.send(embed=embed_to_send)
 client.run(DISCORD_KEY)
 

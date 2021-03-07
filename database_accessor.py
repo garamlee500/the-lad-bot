@@ -48,6 +48,12 @@ class database:
             # find first account listed, and get second column to get xp
             new_xp = account[0][1] + xp_to_add
 
+            # if new_xp is less than 0 make it 0 mf
+
+            if new_xp < 0:
+                new_xp = 0
+
+
             sql_to_update = '''UPDATE players
                                SET total_xp = ?
                                WHERE user_id = ? AND guild_id = ?
@@ -58,9 +64,12 @@ class database:
             cur.execute(sql_to_update,updated_account)
 
             self.conn.commit()
+            return new_xp
         else:
             # if account doesn't exist
             self.new_account(account_id,guild_id,xp=xp_to_add)
+            return xp_to_add
+        
 
     def get_xp(self,account_id,guild_id):
         sql_to_select_account = 'SELECT * FROM players WHERE user_id = ? AND guild_id = ?'
@@ -76,6 +85,22 @@ class database:
             self.new_account(account_id,guild_id)
             return 0 
         
+    def get_all_from_guild(self,guild_id):
+        sql_to_select_accounts = 'SELECT * FROM players WHERE guild_id=?'
+
+        cur = self.conn.cursor()
+
+        cur.execute(sql_to_select_accounts, (guild_id,))
+
+        accounts = cur.fetchall()
+
+        # automatically sort accounts
+
+        def getKey(item):
+            return item[1]
+
+        accounts = sorted(accounts, key=getKey)[::-1]
+        return accounts
 
         
         
