@@ -140,7 +140,7 @@ async def on_message(message):
         time_last_minute_message_senders_reset = time.time()
 
     # if message not sent in last minute
-    if not message_tuple in last_minute_message_senders:
+    if not message_tuple in last_minute_message_senders and not message.author.bot:
         # add to people who sent message in the last minute
         last_minute_message_senders.append(message_tuple)
 
@@ -175,6 +175,10 @@ async def on_message(message):
         else:
             # use message sender if no one mentioned
             ranking_user = message.author
+
+        if ranking_user.bot:
+            await message.channel.send('LMAO. There\'s no ranking for bots. dum dum. (This definitely isn\'t because bots mess up the code...)')
+            return
         current_xp = my_database.get_xp(ranking_user.id,message.guild.id)
         # if level requirements haven't been created
 
