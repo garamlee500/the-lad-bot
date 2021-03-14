@@ -60,7 +60,6 @@ class database:
             '''
 
             updated_account = (new_xp, account_id, guild_id)
-
             cur.execute(sql_to_update,updated_account)
 
             self.conn.commit()
