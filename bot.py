@@ -6,6 +6,7 @@ from customEmbed import LadEmbed
 from random import randint
 from discord.ext import commands
 from discord.ext.commands import has_permissions
+from tabulate import tabulate
 
 description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'$\''
 intents = discord.Intents.default()
@@ -96,6 +97,15 @@ def calculate_current_level(current_xp, xp_requirements):
 
     return current_level_number 
 
+# Change number to shorter readable format
+def human_format(num):
+    num = float('{:.3g}'.format(num))
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        num /= 1000.0
+    return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 't', 'q','Q','s','S','o','n','d','U','D','T','Qt','Qd'][magnitude])
+
 class General(commands.Cog):
     '''General Commands'''
     @commands.command(brief='Says hello to you', help = 'Sends you a nice friendly greeting!')
@@ -157,8 +167,11 @@ class General(commands.Cog):
 
         # if user has an avatar thats not default
         if ranking_user.avatar:
-            # get image link
-            image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.png?size=256'
+            if ranking_user.is_avatar_animated():
+                image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.gif?size=256'
+
+            else:
+                image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.png?size=256'
 
         else:
             user_discriminator = int(ranking_user.discriminator) % 5
@@ -170,28 +183,28 @@ class General(commands.Cog):
     async def levels(self, ctx):
         if ctx.guild is None:
             return
-        embed_to_send = LadEmbed()
-        embed_to_send.title = f'**{ctx.guild.name}**\'s leaderboard:'
-        places = ''
-        usernames = ''
-        xp_amounts = ''
+        leader_board_list = []
         all_guild_accounts = my_database.get_all_from_guild(ctx.guild.id)
         for i in range(10):
             try:
+
                 temp_user = await bot.fetch_user(all_guild_accounts[i][0])
 
-                places += str(i+1) + '\n'
+                standing = (str(i+1))
                 # get user name
-                usernames  += temp_user.name + '#' + temp_user.discriminator + '\n'
-                xp_amounts += (str(all_guild_accounts[i][1])+'\n')
+                temp_username = (temp_user.name + '#' + temp_user.discriminator)
+                xp_amount = (human_format(all_guild_accounts[i][1]))
+
+                # Add to list of users
+                leader_board_list.append([standing, temp_username,xp_amount])
             except IndexError:
                 break
 
-        embed_to_send.add_field(name='Standing', value = places)
-        embed_to_send.add_field(name='Name', value = usernames)
-        embed_to_send.add_field(name='XP', value = xp_amounts)
+        # Convert leaderboard to ascii
+        leaderboard = tabulate(leader_board_list, headers=["Standing", "Username", "Xp"], tablefmt="fancy_grid")
+        
 
-        await ctx.send(embed=embed_to_send)
+        await ctx.send(f'**{ctx.guild.name}**\'s Top 10:\n```' + leaderboard+'```')
 
     
         
@@ -302,7 +315,12 @@ async def on_message(message):
         last_minute_message_senders.append(message_tuple)
 
         added_xp  = randint(15,20)
-        current_xp = my_database.add_xp(added_xp,message.author.id,message.guild.id)
+        try:
+            current_xp = my_database.add_xp(added_xp,message.author.id,message.guild.id)
+
+        # When user is literally over max xp (wtf)
+        except OverflowError:
+            return
 
         level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, current_xp)
         previous_xp = current_xp - added_xp
@@ -316,8 +334,11 @@ async def on_message(message):
             # if user has an avatar thats not default
             if message.author.avatar:
                 # get image link
-                image_url = f'https://cdn.discordapp.com/avatars/{message.author.id}/{message.author.avatar}.png?size=256'
+                if message.author.is_avatar_animated():
+                    image_url = f'https://cdn.discordapp.com/avatars/{message.author.id}/{message.author.avatar}.gif?size=256'
 
+                else:
+                    image_url = f'https://cdn.discordapp.com/avatars/{message.author.id}/{message.author.avatar}.png?size=256'
             else:
                 user_discriminator = int(message.author.discriminator) % 5
                 image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
