@@ -29,8 +29,8 @@ help_string = '''
 `$hello` - Says hello to you
 `$rank <optional:@usermention>` - Get your/user's current xp 
 '$levels' - Get leaderboard of top 10 users
-`$addxp <amount> <@user_to_give_to>` - Add xp to user's total. Must have the 'Manage Roles' Permission
-`$removexp <amount> <@user_to_remove_from>` - Remove xp from user's total. Must have the 'Manage Roles' Permission. (Note: xp is completely deleted and not transferred)
+`$addxp <@user_to_give_to> <amount>` - Add xp to user's total. Must have the 'Administrator' Permission
+`$removexp <@user_to_remove_from> <amount>` - Remove xp from user's total. Must have the 'Administrator' Permission. (Note: xp is completely deleted and not transferred)
 '''
 welcome = '''
 Ummm. Thanks for installing ig?
@@ -209,7 +209,7 @@ class General(commands.Cog):
     
         
 @bot.command()
-@has_permissions(manage_roles=True)
+@has_permissions(administrator=True)
 async def addxp(ctx, user_getting_xp : discord.Member, xp_amount : int):
     if ctx.guild is None:
         return
@@ -227,7 +227,7 @@ async def addxp(ctx, user_getting_xp : discord.Member, xp_amount : int):
 @addxp.error
 async def addxp_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send("You don't have permission to do that! You must have the \'Manage Roles\' permission to do that!")
+        await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
     elif isinstance(error, commands.MemberNotFound):
         await ctx.send('The specified member was not found!')
@@ -238,7 +238,7 @@ async def addxp_error(ctx, error):
 
 
 @bot.command()
-@has_permissions(manage_roles=True)
+@has_permissions(administrator=True)
 async def removexp(ctx, user_getting_xp : discord.Member, xp_amount : int):
     if ctx.guild is None:
         return
@@ -257,7 +257,7 @@ async def removexp(ctx, user_getting_xp : discord.Member, xp_amount : int):
 @removexp.error
 async def removexp_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send("You don't have permission to do that! You must have the \'Manage Roles\' permission to do that!")
+        await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
     elif isinstance(error, commands.MemberNotFound):
         await ctx.send('The specified member was not found!')
