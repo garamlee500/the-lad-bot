@@ -28,7 +28,7 @@ help_string = '''
 `$help` - Gets you help (this)
 `$hello` - Says hello to you
 `$rank <optional:@usermention>` - Get your user's current xp 
-'$levels' - Get leaderboard of top 10 users
+`$levels` - Get leaderboard of top 10 users
 `$addxp <@user_to_give_to> <amount>` - Add xp to user's total. Must have the 'Administrator' Permission
 `$removexp <@user_to_remove_from> <amount>` - Remove xp from user's total. Must have the 'Administrator' Permission. (Note: xp is completely deleted and not transferred)
 '''
