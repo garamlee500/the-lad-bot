@@ -152,7 +152,7 @@ async def autorole_apply(guild):
     # get xp of first guy
     max_xp = members[0][1]
     level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, max_xp)
-
+    level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, autoroles[0][1])
     for autorole in autoroles:
         # xp needed for that role
         try:
