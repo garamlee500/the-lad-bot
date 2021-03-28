@@ -10,9 +10,10 @@ class database:
 
         # sql to create default players table
         sql_to_create_account_table= '''CREATE TABLE IF NOT EXISTS players (
-    user_id integer PRIMARY KEY,
+    user_id integer NOT NULL,
     total_xp integer NOT NULL,
-    guild_id integer NOT NULL
+    guild_id integer NOT NULL,
+    record_id integer PRIMARY KEY
     )
     '''
 
