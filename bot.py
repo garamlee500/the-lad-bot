@@ -8,11 +8,11 @@ from discord.ext import commands
 from discord.ext.commands import has_permissions
 from tabulate import tabulate
 
-description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'$\''
+description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'£\''
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='$', description=description, intents=intents, help_command = None)
+bot = commands.Bot(command_prefix='£', description=description, intents=intents, help_command = None)
 
 MINUTE_IN_SECONDS = 60
 my_database = database()
@@ -25,12 +25,31 @@ file.close()
 
 # String constants that give info
 help_string = '''
-`$help` - Gets you help (this)
-`$hello` - Says hello to you
-`$rank <optional:@usermention>` - Get your user's current xp 
-`$levels` - Get leaderboard of top 10 users
-`$addxp <@user_to_give_to> <amount>` - Add xp to user's total. Must have the 'Administrator' Permission
-`$removexp <@user_to_remove_from> <amount>` - Remove xp from user's total. Must have the 'Administrator' Permission. (Note: xp is completely deleted and not transferred)
+
+**General:** 
+
+
+    `£help` - Gets you help (this)
+
+    `£hello` - Says hello to you
+
+    `£rank <@user>` - Get your user's current xp 
+
+    `£levels` - Get leaderboard of top 10 users
+
+
+**Admin:**
+
+
+    `£addxp <user> <amount>` - Add xp to user's total. Must have the 'Administrator' Permission
+
+    `£removexp <user> <amount>` - Remove xp from user's total. Must have the 'Administrator' Permission. (Note: xp is completely deleted and not transferred)
+
+    `£autorole <role> <minimum_level>` - Create an automatically applying role for users of a certain level. Role must be below the bot's role, and must not be a bot role. Must have the 'Administrator' Permission. WARNING -using this will override any previous autoroles created for that role
+
+    `£remove_autorole <role>` - Remove automatic roling. Must have the 'Administrator' Permission. Note: Does not remove roles from those who have it
+
+    `£view_autorole` - View all automatically applying roles. Must have the 'Administrator' Permission
 '''
 welcome = '''
 Ummm. Thanks for installing ig?
@@ -38,7 +57,7 @@ Um
 My creator forced me to post this here:
 https://youtu.be/dQw4w9WgXcQ
 Um
-You can get help using '$help'
+You can get help using '£help'
 '''
 
 #list of current users who have accessed the bot xp in the last minute
@@ -71,6 +90,24 @@ async def on_guild_join(guild):
     else:
         # Send Welcome message
         await guild.system_channel.send(welcome)
+
+    
+
+    members = await guild.fetch_members(limit=150).flatten()
+        # safely add all members
+
+    for member in members:
+        if not member.bot:
+            my_database.get_xp(member.id, guild.id)
+
+
+
+@bot.event
+async def on_member_join(member):
+    # add user to database
+    if not member.bot:
+        my_database.get_xp(member.id, member.guild.id)
+
 
 def recalculate_xp_requirements(current_list, min_xp):
     while current_list[-2] <= min_xp:
@@ -106,6 +143,40 @@ def human_format(num):
         num /= 1000.0
     return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 't', 'q','Q','s','S','o','n','d','U','D','T','Qt','Qd'][magnitude])
 
+# go through guild and 
+async def autorole_apply(guild):
+    global level_xp_requirements
+
+    members = my_database.get_all_from_guild(guild.id)
+    autoroles = my_database.autorole_guild(guild.id)
+    # get xp of first guy
+    max_xp = members[0][1]
+    level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, max_xp)
+
+    for autorole in autoroles:
+        # xp needed for that role
+        try:
+            xp_for_autorole = level_xp_requirements[autorole[1]]
+        except IndexError:
+           # Normally happens when role level is negative
+            xp_for_autorole = 0
+
+        # The actual role
+        role_to_add = guild.get_role(autorole[0])
+
+        for member in members:
+            if member[1] >= xp_for_autorole:
+                # find member
+                member = await guild.fetch_member(member[0])
+
+                if member and not member.bot:
+                    try:
+                        await member.add_roles(role_to_add, reason = 'Role added due to autorole')
+
+                    except Exception as e:
+                        print(e)
+
+
 class General(commands.Cog):
     '''General Commands'''
     @commands.command(brief='Says hello to you', help = 'Sends you a nice friendly greeting!')
@@ -121,7 +192,7 @@ class General(commands.Cog):
         await ctx.send('Hello there. I am a bot originally created by <@!769880558322188298>, however I am now ' + added_string,
                                        delete_after =2)
 
-        await ctx.send('Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'$help\' to get help')
+        await ctx.send('Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'£help\' to get help')
 
     @commands.command()
     async def rank(self, ctx):
@@ -224,6 +295,8 @@ async def addxp(ctx, user_getting_xp : discord.Member, xp_amount : int):
         await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
         return
     await ctx.send (f"{xp_amount} xp successfully added to <@!{user_getting_xp.id}>\'s bank!")
+
+    await autorole_apply(ctx.guild)
 @addxp.error
 async def addxp_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
@@ -267,6 +340,78 @@ async def removexp_error(ctx, error):
 
         
 
+# Create an automatically applying role
+@bot.command()
+@has_permissions(administrator=True)
+async def autorole(ctx, role : discord.Role, minimum_level : int):
+
+    if ctx.guild is None:
+        return
+    try:
+        my_database.create_new_auto_role(role.id,minimum_level,ctx.guild.id)
+    except OverflowError:
+        await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
+        return
+    await ctx.send (f"Successfully created automatic roling for {role.mention}, for users with a level of (at least) {minimum_level}")
+
+    await autorole_apply(ctx.guild)
+@autorole.error
+async def autorole_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+
+    elif isinstance(error, commands.RoleNotFound):
+        await ctx.send('The specified role was not found!')
+
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send('Please set a valid minimum level')
+
+
+# Remove an automatically applying role
+@bot.command()
+@has_permissions(administrator=True)
+async def remove_autorole(ctx, role : discord.Role):
+
+    if ctx.guild is None:
+        return
+
+    my_database.remove_autorole(role.id,ctx.guild.id)
+   
+    await ctx.send (f"Successfully removed automatic roling for {role.mention} (if existant)")
+
+    await autorole_apply(ctx.guild)
+@remove_autorole.error
+async def remove_autorole_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+
+    elif isinstance(error, commands.RoleNotFound):
+        await ctx.send('The specified role was not found!')
+
+
+# Views all automatically applying roles
+@bot.command()
+@has_permissions(administrator=True)
+async def view_autorole(ctx):
+
+    if ctx.guild is None:
+        return
+
+    autoroles = my_database.autorole_guild(ctx.guild.id)
+   
+    autorole_list = []
+
+    for autorole in autoroles:
+        autorole_list.append([autorole[1], f"{ctx.guild.get_role(autorole[0]).name}"])
+
+    autorole_table = tabulate(autorole_list, headers=["Minimum Level", "Role"], tablefmt="fancy_grid")
+        
+    await ctx.send(f"Autoroles on {ctx.guild.name}:\n```{autorole_table}```")
+@view_autorole.error
+async def view_autorole_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+
 
 @bot.command()
 async def help(ctx):
@@ -290,7 +435,7 @@ async def on_message(message):
 
     if not message.guild:
         await message.channel.send('DM COMMAND DETECTED. PREPARE TO EXTERMINATE', delete_after=2)
-        await message.channel.send('Warning: Commands do not work on DMs. You can add the bot to your server using: https://discord.com/api/oauth2/authorize?client_id=816971607301947422&permissions=3691183152&scope=bot')
+        await message.channel.send('Warning: Commands do not work on DMs. You can add the bot to your server using: https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot')
 
         return
     # search for DAVID IS GAMING GIF https://tenor.com/view/david-monke-david-gaming-gaming-monke-gaming-gif-19468007
@@ -331,6 +476,8 @@ async def on_message(message):
             embed_to_send.title = 'Level up'
             embed_to_send.description = f'GG <@!{message.author.id}>, you just advanced to level {calculate_current_level(current_xp,level_xp_requirements)}!'
 
+            # apply autorole
+            await autorole_apply(message.guild)
             # if user has an avatar thats not default
             if message.author.avatar:
                 # get image link

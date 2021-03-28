@@ -15,12 +15,22 @@ class database:
     guild_id integer NOT NULL
     )
     '''
+
+        sql_to_create_auto_role = '''CREATE TABLE IF NOT EXISTS autoroles (
+
+
+    role_id integer PRIMARY KEY,
+    minimum_level integer NOT NULL,
+    guild_id integer NOT NULL
+    )
+    '''
         try:
             # create connection
             self.conn = sqlite3.connect('database.db')
 
             c = self.conn.cursor()
             c.execute(sql_to_create_account_table)
+            c.execute(sql_to_create_auto_role)
         except Error as e:
             print(e)
 
@@ -101,6 +111,41 @@ class database:
         accounts = sorted(accounts, key=getKey)[::-1]
         return accounts
 
+    def create_new_auto_role(self,role_id,minimum_level,guild_id):
+        # create auto role
+        autorole = (role_id, minimum_level, guild_id)
+        cur = self.conn.cursor()
+
+        # This SQL will delete a record and replace it if it is present
+        sql_to_create_autorole = '''REPLACE INTO autoroles(role_id,minimum_level,guild_id)
+                                   VALUES(?,?,?)
+        '''
+        cur.execute(sql_to_create_autorole, autorole)
+        self.conn.commit()
+
+    # Get autoroles for guild
+    def autorole_guild(self, guild_id):
+        sql_to_select_autorole= 'SELECT * FROM autoroles WHERE guild_id = ?'
+
+        cur = self.conn.cursor()
+        # find autorole to update
+        cur.execute(sql_to_select_autorole, (guild_id,))
+        autoroles = cur.fetchall()
+
+         # automatically sort records
+
+        def getKey(item):
+            return item[1]
+
+        autoroles = sorted(autoroles, key=getKey)[::-1]
+        return autoroles
+
+    def remove_autorole(self, role_id, guild_id):
+        sql_to_delete_autorole = 'DELETE FROM autoroles WHERE role_id = ? AND guild_id = ?'
+
+        cur = self.conn.cursor()
+        cur.execute(sql_to_delete_autorole, (role_id,guild_id))
+        self.conn.commit()
         
         
 
