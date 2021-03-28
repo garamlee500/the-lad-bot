@@ -109,8 +109,8 @@ async def on_member_join(member):
         my_database.get_xp(member.id, member.guild.id)
 
 
-def recalculate_xp_requirements(current_list, min_xp):
-    while current_list[-2] <= min_xp:
+def recalculate_xp_requirements(current_list, min_xp, is_min_xp_min_level = False):
+    while current_list[-2] <= min_xp or (is_min_xp_min_level and len(current_list)<=min_xp):
 
         # formula
         current_level_squared = ((len(current_list) -1)**2)
@@ -152,7 +152,7 @@ async def autorole_apply(guild):
     # get xp of first guy
     max_xp = members[0][1]
     level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, max_xp)
-    level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, autoroles[0][1])
+    level_xp_requirements = recalculate_xp_requirements(level_xp_requirements, autoroles[0][1], True)
     for autorole in autoroles:
         # xp needed for that role
         try:
@@ -160,7 +160,6 @@ async def autorole_apply(guild):
         except IndexError:
            # Normally happens when role level is negative
             xp_for_autorole = 0
-
         # The actual role
         role_to_add = guild.get_role(autorole[0])
 
