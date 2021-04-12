@@ -365,6 +365,15 @@ async def autorole_error(ctx, error):
     elif isinstance(error, commands.BadArgument):
         await ctx.send('Please set a valid minimum level')
 
+from discord import Spotify
+
+@bot.command()
+async def spotify(ctx, user: discord.Member=None):
+    user = user or ctx.author
+    for activity in user.activities:
+        if isinstance(activity, Spotify):
+            await ctx.send("Damm you")
+
 
 # Remove an automatically applying role
 @bot.command()
