@@ -365,15 +365,6 @@ async def autorole_error(ctx, error):
     elif isinstance(error, commands.BadArgument):
         await ctx.send('Please set a valid minimum level')
 
-from discord import Spotify
-
-@bot.command()
-async def spotify(ctx, user: discord.Member=None):
-    user = user or ctx.author
-    for activity in user.activities:
-        if isinstance(activity, Spotify):
-            await ctx.send("Damm you")
-
 
 # Remove an automatically applying role
 @bot.command()
@@ -446,6 +437,11 @@ async def on_message(message):
         await message.channel.send('Warning: Commands do not work on DMs. You can add the bot to your server using: https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot')
 
         return
+
+    if message.activity:
+        if message.activity["type"] == 3:
+            await message.channel.send("damm you :)")
+
     # search for DAVID IS GAMING GIF https://tenor.com/view/david-monke-david-gaming-gaming-monke-gaming-gif-19468007
     if ('david' in message.content and 'gif' in message.content) or 'https://tenor.com/btQGh.gif' in message.content:
         await message.channel.send('DAVID IS GAMING. POG')
