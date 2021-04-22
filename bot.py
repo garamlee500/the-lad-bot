@@ -449,12 +449,12 @@ async def on_message(message):
 
         await message.channel.send('https://tenor.com/view/david-monke-david-gaming-gaming-monke-gaming-gif-19468007')
 
-    if datetime.datetime.today().weekday() == 2 and not(fish_gaming_wednesday_sent):
+    if datetime.today().weekday() == 2 and not(fish_gaming_wednesday_sent):
         fish_gaming_wednesday_sent = True
         
         await message.channel.send("https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4")
 
-    if datetime.datetime.today().weekday() != 2:
+    if datetime.today().weekday() != 2:
         fish_gaming_wednesday_sent = False
     # get user id and guild id
     message_tuple = (message.author.id,message.guild.id)
