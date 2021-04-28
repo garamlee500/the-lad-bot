@@ -429,6 +429,7 @@ async def on_message(message):
     global time_last_minute_message_senders_reset
     global level_xp_requirements
     global my_database
+    global fish_gaming_wednesday_sent
     # if the message sender is the bot, just return
     if message.author == bot.user:
         return
