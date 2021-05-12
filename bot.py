@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from datetime import datetime
 from database_accessor import database
@@ -388,6 +389,12 @@ async def remove_autorole_error(ctx, error):
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send('The specified role was not found!')
 
+
+@bot.command()
+async def type(ctx):
+    async with ctx.typing():
+        while True:
+            await asyncio.sleep(100)
 
 # Views all automatically applying roles
 @bot.command()
