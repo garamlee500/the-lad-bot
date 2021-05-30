@@ -8,6 +8,7 @@ from random import randint
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 from tabulate import tabulate
+import requests
 
 description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'£\''
 intents = discord.Intents.default()
@@ -37,6 +38,8 @@ help_string = '''
     `£rank <@user>` - Get your user's current xp 
 
     `£levels` - Get leaderboard of top 10 users
+    
+    `£inspiro` - Generate a quote from inspirobot.me
 
 
 **Admin:**
@@ -420,6 +423,17 @@ async def view_autorole_error(ctx, error):
         await ctx.send("You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
 
+
+@bot.command()
+async def inspiro(ctx):
+    inspiro_image_url = requests.get('https://inspirobot.me/api?generate=true&oy=vey').text
+    embed_to_return = LadEmbed()
+    embed_to_return.title = 'Inspirobot quote'
+    embed_to_return.description = 'An auto-generated quote from the official Inspirobot api'
+    embed_to_return.set_image(url=inspiro_image_url)
+    await ctx.send(embed = embed_to_return)
+    
+    
 @bot.command()
 async def help(ctx):
 
