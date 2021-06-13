@@ -1,11 +1,13 @@
+.idea/
+
 #notes
 notes.txt
 
 # Database
-database.db
+the-lad-bot/database.db
 
 # Discord Key
-discordKey.txt
+the-lad-bot/discordKey.txt
 
 #vs code
 
