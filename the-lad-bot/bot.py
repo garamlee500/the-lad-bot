@@ -153,7 +153,7 @@ async def autorole_apply(guild):
         try:
             # rule[1] gets minimum level for role
             # Find the minimum xp for that level
-            xp_for_autorole = level_xp_requirements.xp_levels[rule[1]]
+            xp_for_autorole = level_xp_requirements.calculate_xp_for_level(rule[1])
         except IndexError:
             # Normally happens when role level is negative
             xp_for_autorole = 0
@@ -232,10 +232,10 @@ class General(commands.Cog):
         # if level requirements haven't been created
         current_level_number = level_xp_requirements.calculate_current_level(current_xp)
 
-        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements.xp_levels[current_level_number + 1] - \
-                                                          level_xp_requirements.xp_levels[current_level_number]
+        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements.calculate_xp_for_level(current_level_number + 1) - \
+                                                          level_xp_requirements.calculate_xp_for_level(current_level_number)
 
-        xp_on_current_level = current_xp - level_xp_requirements.xp_levels[current_level_number]
+        xp_on_current_level = current_xp - level_xp_requirements.calculate_xp_for_level(current_level_number)
 
         all_guild_accounts = my_database.get_all_from_guild(ctx.guild.id)
 
