@@ -294,125 +294,144 @@ class General(commands.Cog):
         await ctx.send(f'**{ctx.guild.name}**\'s Top 10:\n```' + leaderboard + '```')
 
 
-@bot.command()
-@has_permissions(administrator=True)
-async def addxp(ctx, user_getting_xp: discord.Member, xp_amount: int):
-    if ctx.guild is None:
-        return
+class Admin(commands.Cog):
 
-    if user_getting_xp.bot:
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def addxp(self, ctx, user_getting_xp: discord.Member, xp_amount: int):
+        if ctx.guild is None:
+            return
+
+        if user_getting_xp.bot:
+            await ctx.send(
+                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
+            return
+        # add xp
+        try:
+            my_database.add_xp(xp_amount, user_getting_xp.id, ctx.guild.id)
+        except OverflowError:
+            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
+            return
+        await ctx.send(f"{xp_amount} xp successfully added to <@!{user_getting_xp.id}>\'s bank!")
+
+        await autorole_apply(ctx.guild)
+
+    @addxp.error
+    async def addxp_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+
+        elif isinstance(error, commands.MemberNotFound):
+            await ctx.send('The specified member was not found!')
+
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send('Please set a valid amount of xp to add')
+
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def removexp(self, ctx, user_getting_xp: discord.Member, xp_amount: int):
+        if ctx.guild is None:
+            return
+
+        if user_getting_xp.bot:
+            await ctx.send(
+                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
+            return
+        # Remove xp (make xp_amount negative to remove)
+        try:
+            my_database.add_xp(0 - xp_amount, user_getting_xp.id, ctx.guild.id)
+
+        except OverflowError:
+            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
+            return
+        await ctx.send(f"{xp_amount} xp successfully removed from <@!{user_getting_xp.id}>\'s bank!")
+
+    @removexp.error
+    async def removexp_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+
+        elif isinstance(error, commands.MemberNotFound):
+            await ctx.send('The specified member was not found!')
+
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send('Please set a valid amount of xp to remove')
+
+    # Create an automatically applying role
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def autorole(self, ctx, role: discord.Role, minimum_level: int):
+        if ctx.guild is None:
+            return
+        try:
+            my_database.create_new_auto_role(role.id, minimum_level, ctx.guild.id)
+        except OverflowError:
+            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
+            return
         await ctx.send(
-            'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-        return
-    # add xp
-    try:
-        my_database.add_xp(xp_amount, user_getting_xp.id, ctx.guild.id)
-    except OverflowError:
-        await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-        return
-    await ctx.send(f"{xp_amount} xp successfully added to <@!{user_getting_xp.id}>\'s bank!")
+            f"Successfully created automatic roling for {role.mention}, for users with a level of (at least) {minimum_level}")
 
-    await autorole_apply(ctx.guild)
+        await autorole_apply(ctx.guild)
 
+    @autorole.error
+    async def autorole_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
-@addxp.error
-async def addxp_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send(
-            "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+        elif isinstance(error, commands.RoleNotFound):
+            await ctx.send('The specified role was not found!')
 
-    elif isinstance(error, commands.MemberNotFound):
-        await ctx.send('The specified member was not found!')
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send('Please set a valid minimum level')
 
-    elif isinstance(error, commands.BadArgument):
-        await ctx.send('Please set a valid amount of xp to add')
+    # Remove an automatically applying role
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def remove_autorole(self, ctx, role: discord.Role):
+        if ctx.guild is None:
+            return
 
+        my_database.remove_autorole(role.id, ctx.guild.id)
 
-@bot.command()
-@has_permissions(administrator=True)
-async def removexp(ctx, user_getting_xp: discord.Member, xp_amount: int):
-    if ctx.guild is None:
-        return
+        await ctx.send(f"Successfully removed automatic roling for {role.mention} (if existant)")
 
-    if user_getting_xp.bot:
-        await ctx.send(
-            'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-        return
-    # Remove xp (make xp_amount negative to remove)
-    try:
-        my_database.add_xp(0 - xp_amount, user_getting_xp.id, ctx.guild.id)
+        await autorole_apply(ctx.guild)
 
-    except OverflowError:
-        await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-        return
-    await ctx.send(f"{xp_amount} xp successfully removed from <@!{user_getting_xp.id}>\'s bank!")
+    @remove_autorole.error
+    async def remove_autorole_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
+        elif isinstance(error, commands.RoleNotFound):
+            await ctx.send('The specified role was not found!')
 
-@removexp.error
-async def removexp_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send(
-            "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+    # Views all automatically applying roles
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def view_autorole(self, ctx):
+        if ctx.guild is None:
+            return
 
-    elif isinstance(error, commands.MemberNotFound):
-        await ctx.send('The specified member was not found!')
+        autoroles = my_database.autorole_guild(ctx.guild.id)
 
-    elif isinstance(error, commands.BadArgument):
-        await ctx.send('Please set a valid amount of xp to remove')
+        autorole_list = []
 
+        for rule in autoroles:
+            autorole_list.append([rule[1], f"{ctx.guild.get_role(rule[0]).name}"])
 
-# Create an automatically applying role
-@bot.command()
-@has_permissions(administrator=True)
-async def autorole(ctx, role: discord.Role, minimum_level: int):
-    if ctx.guild is None:
-        return
-    try:
-        my_database.create_new_auto_role(role.id, minimum_level, ctx.guild.id)
-    except OverflowError:
-        await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-        return
-    await ctx.send(
-        f"Successfully created automatic roling for {role.mention}, for users with a level of (at least) {minimum_level}")
+        autorole_table = tabulate(autorole_list, headers=["Minimum Level", "Role"], tablefmt="fancy_grid")
 
-    await autorole_apply(ctx.guild)
+        await ctx.send(f"Autoroles on {ctx.guild.name}:\n```{autorole_table}```")
 
-
-@autorole.error
-async def autorole_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send(
-            "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-    elif isinstance(error, commands.RoleNotFound):
-        await ctx.send('The specified role was not found!')
-
-    elif isinstance(error, commands.BadArgument):
-        await ctx.send('Please set a valid minimum level')
-
-
-# Remove an automatically applying role
-@bot.command()
-@has_permissions(administrator=True)
-async def remove_autorole(ctx, role: discord.Role):
-    if ctx.guild is None:
-        return
-
-    my_database.remove_autorole(role.id, ctx.guild.id)
-
-    await ctx.send(f"Successfully removed automatic roling for {role.mention} (if existant)")
-
-    await autorole_apply(ctx.guild)
-
-
-@remove_autorole.error
-async def remove_autorole_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send(
-            "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-    elif isinstance(error, commands.RoleNotFound):
-        await ctx.send('The specified role was not found!')
+    @view_autorole.error
+    async def view_autorole_error(ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
 
 @bot.command()
@@ -422,30 +441,6 @@ async def typer(ctx):
             await asyncio.sleep(100)
 
 
-# Views all automatically applying roles
-@bot.command()
-@has_permissions(administrator=True)
-async def view_autorole(ctx):
-    if ctx.guild is None:
-        return
-
-    autoroles = my_database.autorole_guild(ctx.guild.id)
-
-    autorole_list = []
-
-    for rule in autoroles:
-        autorole_list.append([rule[1], f"{ctx.guild.get_role(rule[0]).name}"])
-
-    autorole_table = tabulate(autorole_list, headers=["Minimum Level", "Role"], tablefmt="fancy_grid")
-
-    await ctx.send(f"Autoroles on {ctx.guild.name}:\n```{autorole_table}```")
-
-
-@view_autorole.error
-async def view_autorole_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send(
-            "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
 
 @bot.command()
@@ -545,4 +540,6 @@ async def on_message(message):
 
 
 bot.add_cog(General())
+bot.add_cog(Admin())
+
 bot.run(DISCORD_KEY)
