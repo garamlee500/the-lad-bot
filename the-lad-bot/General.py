@@ -5,10 +5,10 @@ from bot import my_database
 from tabulate import tabulate
 from customEmbed import LadEmbed
 from xp_calculator import  XpCalculator
-from discord_slash import SlashCommand
 
 # Initialise xp calculator
 level_xp_requirements = XpCalculator()
+
 
 # Change number to shorter readable format e.g. 12000 -> 12k
 # From the holy grail of stack overflow
@@ -23,6 +23,7 @@ def human_format(num):
                                                                       's', 'S', 'o', 'n', 'd', 'U', 'D', 'T',
                                                                       'Qt', 'Qd'][magnitude])
 
+
 class General(commands.Cog):
     # General Commands
 
@@ -30,6 +31,7 @@ class General(commands.Cog):
         self.bot = bot
 
         self.my_database = my_database
+
     @cog_ext.cog_slash(
         name="hello",
         description="Sends you a nice friendly greeting!"
@@ -139,7 +141,7 @@ class General(commands.Cog):
             }
         ]
                        )
-    async def levels(self, ctx, user_count:int = 10):
+    async def levels(self, ctx, user_count: int = 10):
         if ctx.guild is None:
             return
         leader_board_list = []
@@ -163,7 +165,6 @@ class General(commands.Cog):
         leaderboard = tabulate(leader_board_list, headers=["Standing", "Username", "Xp"], tablefmt="fancy_grid")
 
         await ctx.send(f'**{ctx.guild.name}**\'s Top 10:\n```' + leaderboard + '```')
-
 
 
 def setup(bot):

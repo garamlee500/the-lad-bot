@@ -1,4 +1,3 @@
-import asyncio
 import discord
 from datetime import datetime
 from database_accessor import Database
@@ -7,8 +6,7 @@ import time
 from customEmbed import LadEmbed
 from random import randint
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext, cog_ext
-from tabulate import tabulate
+from discord_slash import SlashCommand, SlashContext
 import requests
 
 description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'£\''
@@ -23,46 +21,11 @@ file = open('discordKey.txt', 'r')
 DISCORD_KEY = file.readlines()[0]
 file.close()
 
-#bot.load_extension("cog")
-
 # Bot checks for xp every minute - you can only get xp once a minute
 MINUTE_IN_SECONDS = 60
 
 # Initialise database
 my_database = Database()
-
-
-
-# String constants that give info
-help_string = '''
-
-**General:** 
-
-
-    `£help` - Gets you help (this)
-
-    `£hello` - Says hello to you
-
-    `£rank <@user>` - Get your user's current xp 
-
-    `£levels` - Get leaderboard of top 10 users
-    
-    `£inspiro` - Generate a quote from inspirobot.me
-
-
-**Admin:**
-
-
-    `£addxp <user> <amount>` - Add xp to user's total. Must have the 'Administrator' Permission
-
-    `£removexp <user> <amount>` - Remove xp from user's total. Must have the 'Administrator' Permission. (Note: xp is completely deleted and not transferred)
-
-    `£autorole <role> <minimum_level>` - Create an automatically applying role for users of a certain level. Role must be below the bot's role, and must not be a bot role. Must have the 'Administrator' Permission. WARNING -using this will override any previous autoroles created for that role
-
-    `£remove_autorole <role>` - Remove automatic roling. Must have the 'Administrator' Permission. Note: Does not remove roles from those who have it
-
-    `£view_autorole` - View all automatically applying roles. Must have the 'Administrator' Permission
-'''
 
 # Some dodgy welcome sign displayed when bot is added to a server
 welcome = '''
@@ -90,7 +53,6 @@ fish_gaming_wednesday_sent = False
 # Print out that it is ready with datetime it was logged in on
 @bot.event
 async def on_ready():
-    global time_info
     time_info = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print(f'We have logged in as {bot.user.name} on {time_info}')
 
@@ -125,8 +87,6 @@ async def on_member_join(member):
     # Add user to database
     if not member.bot:
         my_database.get_xp(member.id, member.guild.id)
-
-
 
 
 # This does autoroling
@@ -174,7 +134,6 @@ async def autorole_apply(guild):
                         print(e)
 
 
-
 @slash.slash(name="inspiro",
              description='Generate a quote from inspirobot.me')
 async def inspiro(ctx: SlashContext):
@@ -185,14 +144,6 @@ async def inspiro(ctx: SlashContext):
     embed_to_return.set_image(url=inspiro_image_url)
     await ctx.send(embed=embed_to_return)
 
-'''
-@bot.command()
-async def help(ctx):
-    embed_to_return = LadEmbed()
-    embed_to_return.title = '**HELP**'
-    embed_to_return.description = help_string
-    await ctx.send(embed=embed_to_return)
-'''
 
 # When bot receives message
 @bot.listen('on_message')
