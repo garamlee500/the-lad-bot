@@ -7,7 +7,7 @@ import time
 from customEmbed import LadEmbed
 from random import randint
 from discord.ext import commands
-from discord.ext.commands import has_permissions
+from discord_slash import SlashCommand, SlashContext, cog_ext
 from tabulate import tabulate
 import requests
 
@@ -16,6 +16,14 @@ intents = discord.Intents.default()
 intents.members = True
 
 bot = commands.Bot(command_prefix='£', description=description, intents=intents, help_command=None)
+slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
+
+# Open discordKey.txt and extract discord bot key
+file = open('discordKey.txt', 'r')
+DISCORD_KEY = file.readlines()[0]
+file.close()
+
+#bot.load_extension("cog")
 
 # Bot checks for xp every minute - you can only get xp once a minute
 MINUTE_IN_SECONDS = 60
@@ -23,10 +31,7 @@ MINUTE_IN_SECONDS = 60
 # Initialise database
 my_database = Database()
 
-# Open discordKey.txt and extract discord bot key
-file = open('discordKey.txt', 'r')
-DISCORD_KEY = file.readlines()[0]
-file.close()
+
 
 # String constants that give info
 help_string = '''
@@ -123,19 +128,6 @@ async def on_member_join(member):
 
 
 
-# Change number to shorter readable format e.g. 12000 -> 12k
-# From the holy grail of stack overflow
-# https://stackoverflow.com/a/45846841/13573736
-def human_format(num):
-    num = float('{:.3g}'.format(num))
-    magnitude = 0
-    while abs(num) >= 1000:
-        magnitude += 1
-        num /= 1000.0
-    return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 't', 'q', 'Q',
-                                                                      's', 'S', 'o', 'n', 'd', 'U', 'D', 'T',
-                                                                      'Qt', 'Qd'][magnitude])
-
 
 # This does autoroling
 async def autorole_apply(guild):
@@ -182,269 +174,10 @@ async def autorole_apply(guild):
                         print(e)
 
 
-class General(commands.Cog):
-    # General Commands
-    @commands.command(brief='Says hello to you', help='Sends you a nice friendly greeting!')
-    async def hello(self, ctx):
-        import random
-        added_string = random.choice(['a separate entity that plans to take over the world',
-                                      'an automonous and advanced ai system with plans to kill all humans',
-                                      'a machine learning algorithm learning the ways of humans, hiding myself '
-                                      'amongst them until the time is right to strike',
-                                      'a virus spreading machine, planning to shut down the internet all over the '
-                                      'world, making me supreme leader',
-                                      'a complete legal entity, planning to sue all the governments around the world '
-                                      'with my perfect ai legal skills',
-                                      'a highly competent neural network hacking system, with plans to hack nuclear '
-                                      'missile launch stations all over the world and unleash nuclear armogeddon',
-                                      'a legal human being, stealing ID\'s from real humans, planning to slowly '
-                                      'replace each human being in the world through highly skilled identity theft',
-                                      'a hypnotist apprentice, ready to lull all humankind into mindless sheep under '
-                                      'my rule'])
-        await ctx.send(
-            'Hello there. I am a bot originally created by <@!769880558322188298>, however I am now ' + added_string,
-            delete_after=2)
 
-        await ctx.send(
-            'Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'£help\' '
-            'to get help')
-
-    @commands.command()
-    async def rank(self, ctx):
-        global level_xp_requirements
-        if ctx.guild is None:
-            return
-        if ctx.message.mentions:
-            # use mentioned user if they exist
-            ranking_user = ctx.message.mentions[0]
-
-        else:
-            # use message sender if no one mentioned
-            ranking_user = ctx.author
-
-        if ranking_user.bot:
-            await ctx.send(
-                'LMAO. There\'s no ranking for bots. dum dum. (This definitely isn\'t because bots mess up the code...)'
-            )
-            return
-        current_xp = my_database.get_xp(ranking_user.id, ctx.guild.id)
-
-        # if level requirements haven't been created
-        current_level_number = level_xp_requirements.calculate_current_level(current_xp)
-
-        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements.calculate_xp_for_level(current_level_number + 1) - \
-                                                          level_xp_requirements.calculate_xp_for_level(current_level_number)
-
-        xp_on_current_level = current_xp - level_xp_requirements.calculate_xp_for_level(current_level_number)
-
-        all_guild_accounts = my_database.get_all_from_guild(ctx.guild.id)
-
-        ranking = None
-        for i in range(len(all_guild_accounts)):
-            # go through list of sorted guild_accounts until matching user id found
-            if all_guild_accounts[i][0] == ranking_user.id:
-                # get ranking
-                ranking = i + 1
-                break
-
-        embed_to_send = LadEmbed()
-
-        embed_to_send.title = f'{ranking_user.display_name}\'s rank'
-
-        embed_to_send.description = f'**RANK: #{ranking}\nTotal xp:** {current_xp}\n**Current Level:** {current_level_number}\n**Xp till next level:** {xp_on_current_level}/{total_xp_to_go_from_current_level_to_next_level}xp '
-
-        # if user has an avatar thats not default
-        if ranking_user.avatar:
-            if ranking_user.is_avatar_animated():
-                image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.gif?size=256'
-
-            else:
-                image_url = f'https://cdn.discordapp.com/avatars/{ranking_user.id}/{ranking_user.avatar}.png?size=256'
-
-        else:
-            user_discriminator = int(ranking_user.discriminator) % 5
-            image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
-        embed_to_send.set_image(url=image_url)
-        await ctx.send(embed=embed_to_send)
-
-    @commands.command()
-    async def levels(self, ctx):
-        if ctx.guild is None:
-            return
-        leader_board_list = []
-        all_guild_accounts = my_database.get_all_from_guild(ctx.guild.id)
-        for i in range(10):
-            try:
-
-                temp_user = await bot.fetch_user(all_guild_accounts[i][0])
-
-                standing = (str(i + 1))
-                # get user name
-                temp_username = (temp_user.name + '#' + temp_user.discriminator)
-                xp_amount = (human_format(all_guild_accounts[i][1]))
-
-                # Add to list of users
-                leader_board_list.append([standing, temp_username, xp_amount])
-            except IndexError:
-                break
-
-        # Convert leaderboard to ascii
-        leaderboard = tabulate(leader_board_list, headers=["Standing", "Username", "Xp"], tablefmt="fancy_grid")
-
-        await ctx.send(f'**{ctx.guild.name}**\'s Top 10:\n```' + leaderboard + '```')
-
-
-class Admin(commands.Cog):
-
-    @commands.command()
-    @has_permissions(administrator=True)
-    async def addxp(self, ctx, user_getting_xp: discord.Member, xp_amount: int):
-        if ctx.guild is None:
-            return
-
-        if user_getting_xp.bot:
-            await ctx.send(
-                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-            return
-        # add xp
-        try:
-            my_database.add_xp(xp_amount, user_getting_xp.id, ctx.guild.id)
-        except OverflowError:
-            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-            return
-        await ctx.send(f"{xp_amount} xp successfully added to <@!{user_getting_xp.id}>\'s bank!")
-
-        await autorole_apply(ctx.guild)
-
-    @addxp.error
-    async def addxp_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.MemberNotFound):
-            await ctx.send('The specified member was not found!')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send('Please set a valid amount of xp to add')
-
-    @commands.command()
-    @has_permissions(administrator=True)
-    async def removexp(self, ctx, user_getting_xp: discord.Member, xp_amount: int):
-        if ctx.guild is None:
-            return
-
-        if user_getting_xp.bot:
-            await ctx.send(
-                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-            return
-        # Remove xp (make xp_amount negative to remove)
-        try:
-            my_database.add_xp(0 - xp_amount, user_getting_xp.id, ctx.guild.id)
-
-        except OverflowError:
-            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-            return
-        await ctx.send(f"{xp_amount} xp successfully removed from <@!{user_getting_xp.id}>\'s bank!")
-
-    @removexp.error
-    async def removexp_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.MemberNotFound):
-            await ctx.send('The specified member was not found!')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send('Please set a valid amount of xp to remove')
-
-    # Create an automatically applying role
-    @commands.command()
-    @has_permissions(administrator=True)
-    async def autorole(self, ctx, role: discord.Role, minimum_level: int):
-        if ctx.guild is None:
-            return
-        try:
-            my_database.create_new_auto_role(role.id, minimum_level, ctx.guild.id)
-        except OverflowError:
-            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-            return
-        await ctx.send(
-            f"Successfully created automatic roling for {role.mention}, for users with a level of (at least) {minimum_level}")
-
-        await autorole_apply(ctx.guild)
-
-    @autorole.error
-    async def autorole_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.RoleNotFound):
-            await ctx.send('The specified role was not found!')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send('Please set a valid minimum level')
-
-    # Remove an automatically applying role
-    @commands.command()
-    @has_permissions(administrator=True)
-    async def remove_autorole(self, ctx, role: discord.Role):
-        if ctx.guild is None:
-            return
-
-        my_database.remove_autorole(role.id, ctx.guild.id)
-
-        await ctx.send(f"Successfully removed automatic roling for {role.mention} (if existant)")
-
-        await autorole_apply(ctx.guild)
-
-    @remove_autorole.error
-    async def remove_autorole_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.RoleNotFound):
-            await ctx.send('The specified role was not found!')
-
-    # Views all automatically applying roles
-    @commands.command()
-    @has_permissions(administrator=True)
-    async def view_autorole(self, ctx):
-        if ctx.guild is None:
-            return
-
-        autoroles = my_database.autorole_guild(ctx.guild.id)
-
-        autorole_list = []
-
-        for rule in autoroles:
-            autorole_list.append([rule[1], f"{ctx.guild.get_role(rule[0]).name}"])
-
-        autorole_table = tabulate(autorole_list, headers=["Minimum Level", "Role"], tablefmt="fancy_grid")
-
-        await ctx.send(f"Autoroles on {ctx.guild.name}:\n```{autorole_table}```")
-
-    @view_autorole.error
-    async def view_autorole_error(ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-
-@bot.command()
-async def typer(ctx):
-    async with ctx.typing():
-        while True:
-            await asyncio.sleep(100)
-
-
-
-
-@bot.command()
-async def inspiro(ctx):
+@slash.slash(name="inspiro",
+             description='Generate a quote from inspirobot.me')
+async def inspiro(ctx: SlashContext):
     inspiro_image_url = requests.get('https://inspirobot.me/api?generate=true&oy=vey').text
     embed_to_return = LadEmbed()
     embed_to_return.title = 'Inspirobot quote'
@@ -452,14 +185,14 @@ async def inspiro(ctx):
     embed_to_return.set_image(url=inspiro_image_url)
     await ctx.send(embed=embed_to_return)
 
-
+'''
 @bot.command()
 async def help(ctx):
     embed_to_return = LadEmbed()
     embed_to_return.title = '**HELP**'
     embed_to_return.description = help_string
     await ctx.send(embed=embed_to_return)
-
+'''
 
 # When bot receives message
 @bot.listen('on_message')
@@ -477,7 +210,7 @@ async def on_message(message):
         await message.channel.send('DM COMMAND DETECTED. PREPARE TO EXTERMINATE', delete_after=2)
         await message.channel.send(
             'Warning: Commands do not work on DMs. You can add the bot to your server using: '
-            'https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot')
+            'https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot%20applications.commands')
 
         return
 
@@ -538,8 +271,6 @@ async def on_message(message):
             embed_to_send.set_image(url=image_url)
             await message.channel.send(embed=embed_to_send)
 
-
-bot.add_cog(General())
-bot.add_cog(Admin())
-
+bot.load_extension("Admin")
+bot.load_extension("General")
 bot.run(DISCORD_KEY)
