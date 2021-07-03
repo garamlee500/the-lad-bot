@@ -1,5 +1,8 @@
 import discord
 from datetime import datetime
+
+import schedule
+
 from database_accessor import Database
 from xp_calculator import XpCalculator
 import time
@@ -20,6 +23,9 @@ slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
 file = open('discordKey.txt', 'r')
 DISCORD_KEY = file.readlines()[0]
 file.close()
+
+
+FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
 
 # Bot checks for xp every minute - you can only get xp once a minute
 MINUTE_IN_SECONDS = 60
@@ -46,8 +52,12 @@ time_last_minute_message_senders_reset = time.time()
 # Initialise xp calculator
 level_xp_requirements = XpCalculator()
 
-fish_gaming_wednesday_sent = False
+async def send_fish_gaming_wednesday():
 
+    # Sennd Fish Gaming Wednesday
+    await discord.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(
+        "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4"
+    )
 
 # When the bot is ready
 # Print out that it is ready with datetime it was logged in on
@@ -148,11 +158,12 @@ async def inspiro(ctx: SlashContext):
 # When bot receives message
 @bot.listen('on_message')
 async def on_message(message):
+    schedule.run_pending()
+
     global last_minute_message_senders
     global time_last_minute_message_senders_reset
     global level_xp_requirements
     global my_database
-    global fish_gaming_wednesday_sent
     # if the message sender is the bot, just return
     if message.author == bot.user:
         return
@@ -164,15 +175,6 @@ async def on_message(message):
             'https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot%20applications.commands')
 
         return
-
-    if datetime.today().weekday() == 2 and not fish_gaming_wednesday_sent:
-        fish_gaming_wednesday_sent = True
-
-        await message.channel.send(
-            "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4")
-
-    if datetime.today().weekday() != 2:
-        fish_gaming_wednesday_sent = False
 
     # get user id and guild id
     message_tuple = (message.author.id, message.guild.id)
@@ -224,4 +226,7 @@ async def on_message(message):
 
 bot.load_extension("Admin")
 bot.load_extension("General")
+
+schedule.every().wednesday.at("05:00").do(send_fish_gaming_wednesday)
+
 bot.run(DISCORD_KEY)
