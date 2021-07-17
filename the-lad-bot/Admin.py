@@ -217,11 +217,17 @@ class Admin(commands.Cog):
                 'type': 8,
                 'required': True
             },
+            {
+                'name': 'emoji',
+                'description': 'Default emoji. Only one emoji must be supplied. Defaults to waving hand.',
+                'type':3,
+                'required': False
+            }
 
     ]
     )
     @has_permissions(manage_guild=True)
-    async def create_reactrole(self, ctx, message: str, role: discord.Role):
+    async def create_reactrole(self, ctx, message: str, role: discord.Role, emoji: discord.emoji = '👋'):
         if ctx.guild is None:
             return
 
@@ -233,7 +239,10 @@ class Admin(commands.Cog):
             role.id
         )
 
-        await sent_message.add_reaction('👋')
+        if isinstance(emoji, str):
+            await sent_message.add_reaction('👋')
+        else:
+            await sent_message.add_reaction(emoji)
 
     @create_reactrole.error
     async def create_reactrole_error(self, ctx, error):
