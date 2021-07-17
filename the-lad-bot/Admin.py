@@ -303,5 +303,53 @@ class Admin(commands.Cog):
                 "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
 
 
+    @cog_ext.cog_slash(
+        name="create_reactrole",
+        description="Create a message, that when reacted to, gives users role",
+
+        options = [
+            {
+
+                'name': 'message',
+                'description': 'Message to be sent',
+                'type': 3,
+                'required': True
+            },
+            {
+                'name': 'role',
+                'description': 'Role to give when message reacted to',
+                'type': 8,
+                'required': True
+            },
+
+    ]
+    )
+    @has_permissions(administrator=True)
+    async def create_reactrole(self, ctx, message: str, role: discord.Role):
+        if ctx.guild is None:
+            return
+
+        sent_message = await ctx.send(message)
+
+
+        self.my_database.create_reactrole(
+            sent_message.id,
+            role.id
+        )
+
+        await sent_message.add_reaction('👋')
+
+    @create_reactrole.error
+    async def create_reactrole_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!"
+            )
+
+        elif isinstance(error, commands.RoleNotFound):
+            await ctx.send(
+                "The specified role was not found!"
+            )
+
 def setup(bot):
     bot.add_cog(Admin(bot))

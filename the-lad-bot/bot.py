@@ -35,12 +35,8 @@ my_database = Database()
 
 # Some dodgy welcome sign displayed when bot is added to a server
 welcome = '''
-Ummm. Thanks for installing ig?
-Um
-My creator forced me to post this here:
-https://youtu.be/dQw4w9WgXcQ
-Um
-You can get help using '£help'
+Thank you for installing the-lad-bot!
+View my commands by typing in \'/\'
 '''
 
 # This stores a list of everyone who has received xp in the last minute
@@ -223,6 +219,54 @@ async def on_message(message):
                 image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
             embed_to_send.set_image(url=image_url)
             await message.channel.send(embed=embed_to_send)
+
+
+@bot.listen('on_raw_reaction_add')
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+
+
+    react_role = my_database.find_reactrole(payload.message_id)
+    guild = bot.get_guild(payload.guild_id)
+
+    if react_role:
+        role_to_add = guild.get_role(react_role[0][1])
+
+        member = guild.get_member(payload.user_id)
+        if not member.bot:
+            await member.add_roles(role_to_add, reason = 'Reacted to message')
+
+
+# We have to use raw reactions as the normal method doesn't work if the bot restarts
+# As the internal message cache is cleared
+@bot.listen('on_raw_reaction_remove')
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
+
+    react_role = my_database.find_reactrole(payload.message_id)
+
+    if not react_role:
+        return
+
+    all_reactions_removed = True
+
+    guild = bot.get_guild(payload.guild_id)
+    user = guild.get_member(payload.user_id)
+    channel = bot.get_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
+
+    reactors = await message.reactions[0].users().flatten()
+
+    # Check if user has removed ALL their reactions from the message
+    for reactor in reactors:
+        if reactor.id == user.id:
+            all_reactions_removed = False
+            break
+
+    if all_reactions_removed:
+
+        role_to_add = guild.get_role(react_role[0][1])
+        await user.remove_roles(role_to_add, reason = 'Unreacted from message')
+
+
 
 bot.load_extension("Admin")
 bot.load_extension("General")
