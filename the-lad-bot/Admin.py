@@ -6,7 +6,7 @@ from bot import my_database
 from tabulate import tabulate
 from discord.ext.commands import has_permissions
 from bot import autorole_apply
-from custom_embed import LadEmbed
+from customEmbed import LadEmbed
 
 class Admin(commands.Cog):
 
