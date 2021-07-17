@@ -6,7 +6,7 @@ from bot import my_database
 from tabulate import tabulate
 from discord.ext.commands import has_permissions
 from bot import autorole_apply
-
+from custom_embed import LadEmbed
 
 class Admin(commands.Cog):
 
@@ -231,7 +231,11 @@ class Admin(commands.Cog):
         if ctx.guild is None:
             return
 
-        sent_message = await ctx.send(message)
+
+        embed_to_return = LadEmbed()
+        embed_to_return.description = message
+        
+        sent_message = await ctx.send(embed=embed_to_return)
 
 
         self.my_database.create_reactrole(
