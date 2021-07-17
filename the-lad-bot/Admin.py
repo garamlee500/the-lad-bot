@@ -16,7 +16,7 @@ class Admin(commands.Cog):
 
     @cog_ext.cog_slash(
         name="xp",
-        description="Add or remove xp from user's total. Must have the 'Administrator' Permission",
+        description="Add or remove xp from user's total. Must have the 'Manage Server' Permission",
         options=[
             {
                 'name': 'add_remove_xp',
@@ -49,7 +49,7 @@ class Admin(commands.Cog):
                 'required': True
             }
         ])
-    @has_permissions(administrator=True)
+    @has_permissions(manage_guild=True)
     async def xp(self, ctx, add_remove_xp: bool, user: discord.Member, amount: int):
         if ctx.guild is None:
             return
@@ -81,7 +81,7 @@ class Admin(commands.Cog):
     async def xp_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!")
 
         elif isinstance(error, commands.MemberNotFound):
             await ctx.send('The specified member was not found!')
@@ -89,111 +89,7 @@ class Admin(commands.Cog):
         elif isinstance(error, commands.BadArgument):
             await ctx.send('Please set a valid amount of xp to add')
 
-    '''
-    @cog_ext.cog_slash(
-
-        name="addxp",
-        description = "Add xp to user's total. Must have the 'Administrator' Permission",
-        options = [
-            {
-                'name':'user',
-                'description':'User to add xp to',
-                'type': 6,
-                'required':True
-            },
-
-            {
-                'name':'amount',
-                'description':'Amount of xp to add',
-                'type': 4,
-                'required':True
-            }
-        ]
-    )
-
-    @has_permissions(administrator=True)
-    async def addxp(self, ctx, user: discord.Member, amount: int):
-        if ctx.guild is None:
-            return
-
-        if user.bot:
-            await ctx.send(
-                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-            return
-        # add xp
-        try:
-            self.my_database.add_xp(amount, user.id, ctx.guild.id)
-        except OverflowError:
-            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-            return
-        await ctx.send(f"{amount} xp successfully added to <@!{user.id}>\'s bank!")
-
-        await autorole_apply(ctx.guild)
-
-    @addxp.error
-    async def addxp_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.MemberNotFound):
-            await ctx.send('The specified member was not found!')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send('Please set a valid amount of xp to add')
-
-
-    @cog_ext.cog_slash(
-
-        name="removexp",
-        description="Remove xp from user's total. Must have the 'Administrator' Permission",
-        options=[
-            {
-                'name': 'user',
-                'description': 'User to remove xp from',
-                'type': 6,
-                'required': True
-            },
-
-            {
-                'name': 'amount',
-                'description': 'Amount of xp to remove',
-                'type': 4,
-                'required': True
-            }
-        ]
-    )
-    @has_permissions(administrator=True)
-    async def removexp(self, ctx, user: discord.Member, amount: int):
-        if ctx.guild is None:
-            return
-
-        if user.bot:
-            await ctx.send(
-                'Bots can\'t have xp dum dum. (Definitely not because of the fatal errors bots having xp causes)')
-            return
-        # Remove xp (make xp_amount negative to remove)
-        try:
-            self.my_database.add_xp(0 - amount, user.id, ctx.guild.id)
-
-        except OverflowError:
-            await ctx.send('Jeez, thats a big number. Please be nicer :frowning: :cry:')
-            return
-        await ctx.send(f"{amount} xp successfully removed from <@!{user.id}>\'s bank!")
-
-    @removexp.error
-    async def removexp_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
-
-        elif isinstance(error, commands.MemberNotFound):
-            await ctx.send('The specified member was not found!')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send('Please set a valid amount of xp to remove')
-'''
-
+  
     # Create an automatically applying role
     @cog_ext.cog_slash(
         name="autorole",
@@ -215,7 +111,7 @@ class Admin(commands.Cog):
             }
         ]
     )
-    @has_permissions(administrator=True)
+    @has_permissions(manage_guild=True)
     async def autorole(self, ctx, role: discord.Role, minimum_level: int):
         if ctx.guild is None:
             return
@@ -233,7 +129,7 @@ class Admin(commands.Cog):
     async def autorole_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!")
 
         elif isinstance(error, commands.RoleNotFound):
             await ctx.send('The specified role was not found!')
@@ -243,7 +139,7 @@ class Admin(commands.Cog):
 
     @cog_ext.cog_slash(
         name="remove_autorole",
-        description="Stop autoroling. Must have the 'Administrator' Permission.",
+        description="Stop autoroling. Must have the 'Manage Server' Permission.",
 
         options=[
 
@@ -255,7 +151,7 @@ class Admin(commands.Cog):
             },
         ]
     )
-    @has_permissions(administrator=True)
+    @has_permissions(manage_guild=True)
     async def remove_autorole(self, ctx, role: discord.Role):
         if ctx.guild is None:
             return
@@ -270,7 +166,7 @@ class Admin(commands.Cog):
     async def remove_autorole_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!")
 
         elif isinstance(error, commands.RoleNotFound):
             await ctx.send('The specified role was not found!')
@@ -278,9 +174,9 @@ class Admin(commands.Cog):
     # Views all automatically applying roles
     @cog_ext.cog_slash(
         name='view_autoroles',
-        description="View all automatically applying roles. Must have the 'Administrator' Permission",
+        description="View all automatically applying roles. Must have the 'Manage Server' Permission",
     )
-    @has_permissions(administrator=True)
+    @has_permissions(manage_guild=True)
     async def view_autoroles(self, ctx):
         if ctx.guild is None:
             return
@@ -300,7 +196,7 @@ class Admin(commands.Cog):
     async def view_autoroles_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!")
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!")
 
 
     @cog_ext.cog_slash(
@@ -324,7 +220,7 @@ class Admin(commands.Cog):
 
     ]
     )
-    @has_permissions(administrator=True)
+    @has_permissions(manage_guild=True)
     async def create_reactrole(self, ctx, message: str, role: discord.Role):
         if ctx.guild is None:
             return
@@ -343,7 +239,7 @@ class Admin(commands.Cog):
     async def create_reactrole_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                "You don't have permission to do that! You must have the \'Administrator\' permission to do that!"
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!"
             )
 
         elif isinstance(error, commands.RoleNotFound):
