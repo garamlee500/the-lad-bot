@@ -23,6 +23,14 @@ class Database:
     guild_id integer NOT NULL
     )
     '''
+
+        sql_to_create_react_role = '''CREATE TABLE IF NOT EXISTS reactroles (
+     
+    message_id integer PRIMARY KEY,
+    role_id integer NOT NULL,
+    emoji_id integer NOT NULL        
+    )    
+    '''
         try:
             # create connection
             self.conn = sqlite3.connect('database.db')
@@ -143,3 +151,23 @@ class Database:
         cur = self.conn.cursor()
         cur.execute(sql_to_delete_autorole, (role_id, guild_id))
         self.conn.commit()
+
+    def create_reactrole(self, message_id, role_id, emoji_id):
+
+        cur = self.conn.cursor()
+
+        sql_to_create_reactrole = '''INSERT INTO reactroles(message_id, role_id, emoji_id)
+                                   VALUES(?,?,?)
+        '''
+        cur.execute(sql_to_create_reactrole, (message_id, role_id, emoji_id))
+        self.conn.commit()
+
+    def find_reactrole(self, message_id):
+        sql_to_select_reactrole = 'SELECT * FROM reactroles WHERE message_id = ?'
+
+        cur = self.conn.cursor()
+        # find autorole to update
+        cur.execute(sql_to_select_reactrole, (message_id,))
+        reactroles = cur.fetchall()
+
+        return reactroles
