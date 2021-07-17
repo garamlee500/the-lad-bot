@@ -227,7 +227,7 @@ class Admin(commands.Cog):
     ]
     )
     @has_permissions(manage_guild=True)
-    async def create_reactrole(self, ctx, message: str, role: discord.Role, emoji: discord.emoji = '👋'):
+    async def create_reactrole(self, ctx, message: str, role: discord.Role, emoji: discord.emoji = None):
         if ctx.guild is None:
             return
 
@@ -239,10 +239,13 @@ class Admin(commands.Cog):
             role.id
         )
 
-        if isinstance(emoji, str):
-            await sent_message.add_reaction('👋')
-        else:
+        try:
             await sent_message.add_reaction(emoji)
+
+        except Exception as e:                    
+            print(e)
+            await sent_message.add_reaction('👋')
+
 
     @create_reactrole.error
     async def create_reactrole_error(self, ctx, error):
