@@ -188,4 +188,10 @@ class Database:
 
         return rank_channels
 
+    def turn_off_rank_channel(self, guild_id):
+        sql = 'DELETE FROM customRankChannels WHERE guild_id=?'
+        cur = self.conn.cursor()
+        cur.execute(sql, (guild_id,))
+        self.conn.commit()
+
 

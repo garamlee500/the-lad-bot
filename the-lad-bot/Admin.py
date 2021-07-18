@@ -263,5 +263,40 @@ class Admin(commands.Cog):
                 "The specified role was not found!"
             )
 
+    @cog_ext.cog_slash(
+        name="set_rank_channel",
+        description="Set the channel for rank messages to come out of",
+
+        options = [
+            {
+
+                'name': 'channel',
+                'description': 'Channel where rank messages are to be sent. Leave empty to turn off',
+                'type': 7,
+                'required': False
+            },
+
+
+    ]
+    )
+    @has_permissions(manage_guild=True)
+    async def set_rank_channel(self, ctx, channel: discord.TextChannel = None):
+
+        if channel:
+            self.my_database.set_rank_channel(ctx.guild.id, channel.id)
+            await ctx.send("Rank message channel set successfully!")
+
+
+        else:
+            self.my_database.turn_off_rank_channel(ctx.guild.id)
+            await ctx.send("Rank messaging turned off successfully!")
+
+    @set_rank_channel.error
+    async def set_rank_channel_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send(
+                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!"
+            )
+
 def setup(bot):
     bot.add_cog(Admin(bot))

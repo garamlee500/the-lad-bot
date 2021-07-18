@@ -24,7 +24,6 @@ file = open('discordKey.txt', 'r')
 DISCORD_KEY = file.readlines()[0]
 file.close()
 
-
 FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
 
 # Bot checks for xp every minute - you can only get xp once a minute
@@ -37,6 +36,9 @@ my_database = Database()
 welcome = '''
 Thank you for installing the-lad-bot!
 View my commands by typing in \'/\'
+
+To ensure all functionality works, drag up the-lad-bot's role in Role settings (as high as possible)!
+If you want, use /set_rank_channel to set where level up messages are sent!
 '''
 
 # This stores a list of everyone who has received xp in the last minute
@@ -48,12 +50,13 @@ time_last_minute_message_senders_reset = time.time()
 # Initialise xp calculator
 level_xp_requirements = XpCalculator()
 
-async def send_fish_gaming_wednesday():
 
+async def send_fish_gaming_wednesday():
     # Sennd Fish Gaming Wednesday
-    await discord.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(
+    await bot.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(
         "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4"
     )
+
 
 # When the bot is ready
 # Print out that it is ready with datetime it was logged in on
@@ -66,7 +69,6 @@ async def on_ready():
 # When bot joins a guild
 @bot.event
 async def on_guild_join(guild):
-
     # Find the system channel of the guild if it exists
     if guild.system_channel is None:
         try:
@@ -168,7 +170,7 @@ async def on_message(message):
         await message.channel.send('DM COMMAND DETECTED. PREPARE TO EXTERMINATE', delete_after=2)
         await message.channel.send(
             'Warning: Commands do not work on DMs. You can add the bot to your server using: '
-            'https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749824&scope=bot%20applications.commands')
+            'https://discord.com/oauth2/authorize?client_id=816971607301947422&permissions=268749888&scope=bot%20applications.commands')
 
         return
 
@@ -195,7 +197,15 @@ async def on_message(message):
 
         previous_xp = current_xp - added_xp
 
-        if level_xp_requirements.calculate_current_level(previous_xp) < level_xp_requirements.calculate_current_level(current_xp):
+        if level_xp_requirements.calculate_current_level(previous_xp) < level_xp_requirements.calculate_current_level(
+                current_xp):
+
+            try:
+                rank_channel_id = my_database.get_rank_channel(message.guild.id)[0][0]
+                rank_channel = bot.get_channel(rank_channel_id)
+            except IndexError:
+                # If rank messaging is turned off
+                return
 
             # if level up
             embed_to_send = LadEmbed()
@@ -218,13 +228,11 @@ async def on_message(message):
                 user_discriminator = int(message.author.discriminator) % 5
                 image_url = f'https://cdn.discordapp.com/embed/avatars/{user_discriminator}.png?size=256'
             embed_to_send.set_image(url=image_url)
-            await message.channel.send(embed=embed_to_send)
+            await rank_channel.send(embed=embed_to_send)
 
 
 @bot.listen('on_raw_reaction_add')
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
-
-
     react_role = my_database.find_reactrole(payload.message_id)
     guild = bot.get_guild(payload.guild_id)
 
@@ -233,14 +241,13 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
         member = guild.get_member(payload.user_id)
         if not member.bot:
-            await member.add_roles(role_to_add, reason = 'Reacted to message')
+            await member.add_roles(role_to_add, reason='Reacted to message')
 
 
 # We have to use raw reactions as the normal method doesn't work if the bot restarts
 # As the internal message cache is cleared
 @bot.listen('on_raw_reaction_remove')
 async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
-
     react_role = my_database.find_reactrole(payload.message_id)
 
     if not react_role:
@@ -262,10 +269,8 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
             break
 
     if all_reactions_removed:
-
         role_to_add = guild.get_role(react_role[0][1])
-        await user.remove_roles(role_to_add, reason = 'Unreacted from message')
-
+        await user.remove_roles(role_to_add, reason='Unreacted from message')
 
 
 bot.load_extension("Admin")
