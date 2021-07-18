@@ -30,6 +30,12 @@ class Database:
     role_id integer NOT NULL
     )    
     '''
+
+        sql_to_create_custom_rank_channel = '''CREATE TABLE IF NOT EXISTS customRankChannels (
+    guild_id integer PRIMARY KEY,
+    channel_id integer NOT NULL
+    )
+    '''
         try:
             # create connection
             self.conn = sqlite3.connect('database.db')
@@ -38,6 +44,7 @@ class Database:
             c.execute(sql_to_create_account_table)
             c.execute(sql_to_create_auto_role)
             c.execute(sql_to_create_react_role)
+            c.execute(sql_to_create_custom_rank_channel)
 
         except Error as e:
             print(e)
@@ -101,7 +108,7 @@ class Database:
             return 0
 
     def get_all_from_guild(self, guild_id):
-        sql_to_select_accounts = 'SELECT * FROM players WHERE guild_id=?'
+        sql_to_select_accounts = 'SELECT * FROM players WHERE guild_id=? ORDER BY total_xp DESC'
 
         cur = self.conn.cursor()
 
@@ -109,12 +116,6 @@ class Database:
 
         accounts = cur.fetchall()
 
-        # automatically sort accounts
-
-        def get_key(item):
-            return item[1]
-
-        accounts = sorted(accounts, key=get_key)[::-1]
         return accounts
 
     def create_new_auto_role(self, role_id, minimum_level, guild_id):
@@ -131,19 +132,13 @@ class Database:
 
     # Get autoroles for guild
     def autorole_guild(self, guild_id):
-        sql_to_select_autorole = 'SELECT * FROM autoroles WHERE guild_id = ?'
+        sql_to_select_autorole = 'SELECT * FROM autoroles WHERE guild_id = ? ORDER BY minimum_level DESC'
 
         cur = self.conn.cursor()
         # find autorole to update
         cur.execute(sql_to_select_autorole, (guild_id,))
         autoroles = cur.fetchall()
 
-        # automatically sort records
-
-        def get_key(item):
-            return item[1]
-
-        autoroles = sorted(autoroles, key=get_key)[::-1]
         return autoroles
 
     def remove_autorole(self, role_id, guild_id):
@@ -172,3 +167,25 @@ class Database:
         reactroles = cur.fetchall()
 
         return reactroles
+
+    def set_rank_channel(self, guild_id, channel_id):
+        rank_channel = (guild_id, channel_id)
+        cur = self.conn.cursor()
+
+        # This SQL will delete a record and replace it if it is present
+        sql_to_set_rank_channel = '''REPLACE INTO customRankChannels(guild_id, channel_id)
+                                           VALUES(?,?)
+                '''
+        cur.execute(sql_to_set_rank_channel, rank_channel)
+        self.conn.commit()
+
+    def get_rank_channel(self, guild_id):
+        sql_to_get_rank_channel = 'SELECT channel_id FROM customRankChannels WHERE guild_id = ?'
+        cur = self.conn.cursor()
+        # find autorole to update
+        cur.execute(sql_to_get_rank_channel, (guild_id,))
+        rank_channels = cur.fetchall()
+
+        return rank_channels
+
+
