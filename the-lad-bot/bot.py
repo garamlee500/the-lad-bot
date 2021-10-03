@@ -11,6 +11,7 @@ from random import randint
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext
 import requests
+from discord_slash.context import ComponentContext
 
 description = 'A Discord bot emulating the MEE6 level system - the prefix for this server is \'£\''
 intents = discord.Intents.default()
@@ -230,7 +231,7 @@ async def on_message(message):
             embed_to_send.set_image(url=image_url)
             await rank_channel.send(embed=embed_to_send)
 
-
+'''
 @bot.listen('on_raw_reaction_add')
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     react_role = my_database.find_reactrole(payload.message_id)
@@ -271,6 +272,23 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
     if all_reactions_removed:
         role_to_add = guild.get_role(react_role[0][1])
         await user.remove_roles(role_to_add, reason='Unreacted from message')
+
+'''
+
+
+@slash.component_callback()
+async def on_component(ctx: ComponentContext):
+    react_role = my_database.find_reactrole(ctx.origin_message_id)
+    if ctx.custom_id == "add":
+        if react_role:
+            role_to_add = ctx.guild.get_role(react_role[0][1])
+            if not ctx.author.bot:
+                await ctx.author.add_roles(role_to_add, reason='Pressed special button for role!')
+
+    elif ctx.custom_id == "remove":
+        role_to_add = ctx.guild.get_role(react_role[0][1])
+        await ctx.author.remove_roles(role_to_add, reason='Pressed special button to remove role')
+
 
 
 bot.load_extension("Admin")

@@ -6,7 +6,8 @@ from bot import my_database
 from tabulate import tabulate
 from discord.ext.commands import has_permissions
 from bot import autorole_apply
-from customEmbed import LadEmbed
+from discord_slash.utils.manage_components import create_button, create_actionrow
+from discord_slash.model import ButtonStyle
 
 class Admin(commands.Cog):
 
@@ -200,8 +201,8 @@ class Admin(commands.Cog):
 
 
     @cog_ext.cog_slash(
-        name="create_reactrole",
-        description="Create a message, that when reacted to, gives users role",
+        name="create_buttonrole",
+        description="Create button that gives users roles",
 
         options = [
             {
@@ -213,29 +214,38 @@ class Admin(commands.Cog):
             },
             {
                 'name': 'role',
-                'description': 'Role to give when message reacted to',
+                'description': 'Role to give when button pressed',
                 'type': 8,
                 'required': True
             },
             {
-                'name': 'emoji',
-                'description': 'Default emoji. Only one emoji must be supplied. Defaults to waving hand.',
-                'type':3,
-                'required': False
-            }
+                'name': 'button_text',
+                'description': "Text for button",
+                'type': 3,
+                'required': True
+            },
 
     ]
     )
     @has_permissions(manage_guild=True)
-    async def create_reactrole(self, ctx, message: str, role: discord.Role, emoji: discord.emoji = None):
+    async def create_buttonrole(self, ctx, message: str, role: discord.Role, button_text: str):
         if ctx.guild is None:
             return
 
+        button_action_row = create_actionrow(*[
+            create_button(
+                style=ButtonStyle.green,
+                label=button_text,
+                custom_id="add"
+            ),
+            create_button(
+                style=ButtonStyle.red,
+                label="Remove Role.",
+                custom_id="remove"
+            )
+        ])
 
-        embed_to_return = LadEmbed()
-        embed_to_return.description = message
-        
-        sent_message = await ctx.send(embed=embed_to_return)
+        sent_message = await ctx.send(message, components=[button_action_row])
 
 
         self.my_database.create_reactrole(
@@ -243,16 +253,10 @@ class Admin(commands.Cog):
             role.id
         )
 
-        try:
-            await sent_message.add_reaction(emoji)
-
-        except Exception as e:                    
-            print(e)
-            await sent_message.add_reaction('👋')
 
 
-    @create_reactrole.error
-    async def create_reactrole_error(self, ctx, error):
+    @create_buttonrole.error
+    async def create_buttonrole_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(
                 "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!"
