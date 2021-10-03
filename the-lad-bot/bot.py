@@ -1,7 +1,8 @@
 import discord
 from datetime import datetime
 
-import schedule
+from discord.ext.commands import has_permissions
+from discord_slash.utils.manage_components import create_actionrow, create_button
 
 from database_accessor import Database
 from xp_calculator import XpCalculator
@@ -9,7 +10,7 @@ import time
 from customEmbed import LadEmbed
 from random import randint
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext
+from discord_slash import SlashCommand, SlashContext, ButtonStyle
 import requests
 from discord_slash.context import ComponentContext
 
@@ -157,7 +158,6 @@ async def inspiro(ctx: SlashContext):
 # When bot receives message
 @bot.listen('on_message')
 async def on_message(message):
-    schedule.run_pending()
 
     global last_minute_message_senders
     global time_last_minute_message_senders_reset
@@ -276,7 +276,71 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 '''
 
 
-@slash.component_callback()
+@slash.slash(
+    name="create_buttonrole",
+    description="Create button that gives users roles",
+
+    options=[
+        {
+
+            'name': 'message',
+            'description': 'Message to be sent',
+            'type': 3,
+            'required': True
+        },
+        {
+            'name': 'role',
+            'description': 'Role to give when button pressed',
+            'type': 8,
+            'required': True
+        },
+        {
+            'name': 'button_text',
+            'description': "Text for button",
+            'type': 3,
+            'required': True
+        },
+
+    ]
+)
+@has_permissions(manage_guild=True)
+async def create_buttonrole(ctx: SlashContext, message: str, role: discord.Role, button_text: str):
+    if ctx.guild is None:
+        return
+
+    button_action_row = create_actionrow(*[
+        create_button(
+            style=ButtonStyle.green,
+            label=button_text,
+            custom_id="add"
+        ),
+        create_button(
+            style=ButtonStyle.red,
+            label="Remove Role",
+            custom_id="remove"
+        )
+    ])
+
+    sent_message = await ctx.send(message, components=[button_action_row])
+
+    my_database.create_reactrole(
+        sent_message.id,
+        role.id
+    )
+@create_buttonrole.error
+async def create_buttonrole_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send(
+            "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!"
+        )
+
+    elif isinstance(error, commands.RoleNotFound):
+        await ctx.send(
+            "The specified role was not found!"
+        )
+
+
+@bot.event
 async def on_component(ctx: ComponentContext):
     react_role = my_database.find_reactrole(ctx.origin_message_id)
     if ctx.custom_id == "add":
@@ -284,16 +348,15 @@ async def on_component(ctx: ComponentContext):
             role_to_add = ctx.guild.get_role(react_role[0][1])
             if not ctx.author.bot:
                 await ctx.author.add_roles(role_to_add, reason='Pressed special button for role!')
+                await ctx.send(f'Successfully added {role_to_add.name} role!', hidden=True)
 
     elif ctx.custom_id == "remove":
         role_to_add = ctx.guild.get_role(react_role[0][1])
         await ctx.author.remove_roles(role_to_add, reason='Pressed special button to remove role')
-
+        await ctx.send(f'Successfully removed {role_to_add.name} role!', hidden=True)
 
 
 bot.load_extension("Admin")
 bot.load_extension("General")
-
-schedule.every().wednesday.at("05:00").do(send_fish_gaming_wednesday)
 
 bot.run(DISCORD_KEY)

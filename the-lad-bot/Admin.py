@@ -200,72 +200,7 @@ class Admin(commands.Cog):
                 "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!")
 
 
-    @cog_ext.cog_slash(
-        name="create_buttonrole",
-        description="Create button that gives users roles",
 
-        options = [
-            {
-
-                'name': 'message',
-                'description': 'Message to be sent',
-                'type': 3,
-                'required': True
-            },
-            {
-                'name': 'role',
-                'description': 'Role to give when button pressed',
-                'type': 8,
-                'required': True
-            },
-            {
-                'name': 'button_text',
-                'description': "Text for button",
-                'type': 3,
-                'required': True
-            },
-
-    ]
-    )
-    @has_permissions(manage_guild=True)
-    async def create_buttonrole(self, ctx, message: str, role: discord.Role, button_text: str):
-        if ctx.guild is None:
-            return
-
-        button_action_row = create_actionrow(*[
-            create_button(
-                style=ButtonStyle.green,
-                label=button_text,
-                custom_id="add"
-            ),
-            create_button(
-                style=ButtonStyle.red,
-                label="Remove Role.",
-                custom_id="remove"
-            )
-        ])
-
-        sent_message = await ctx.send(message, components=[button_action_row])
-
-
-        self.my_database.create_reactrole(
-            sent_message.id,
-            role.id
-        )
-
-
-
-    @create_buttonrole.error
-    async def create_buttonrole_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(
-                "You don't have permission to do that! You must have the \'Manage Server\' permission to do that!"
-            )
-
-        elif isinstance(error, commands.RoleNotFound):
-            await ctx.send(
-                "The specified role was not found!"
-            )
 
     @cog_ext.cog_slash(
         name="set_rank_channel",
