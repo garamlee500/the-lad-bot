@@ -26,8 +26,6 @@ file = open('discordKey.txt', 'r')
 DISCORD_KEY = file.readlines()[0]
 file.close()
 
-FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
-
 # Bot checks for xp every minute - you can only get xp once a minute
 MINUTE_IN_SECONDS = 60
 
@@ -53,23 +51,16 @@ time_last_minute_message_senders_reset = time.time()
 level_xp_requirements = XpCalculator()
 
 
-async def send_fish_gaming_wednesday():
-    # Sennd Fish Gaming Wednesday
-    await bot.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(
-        "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4"
-    )
-
-
 # When the bot is ready
 # Print out that it is ready with datetime it was logged in on
-@bot.event
+@bot.listen('on_ready')
 async def on_ready():
     time_info = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print(f'We have logged in as {bot.user.name} on {time_info}')
 
 
 # When bot joins a guild
-@bot.event
+@bot.listen('on_guild_join')
 async def on_guild_join(guild):
     # Find the system channel of the guild if it exists
     if guild.system_channel is None:
@@ -92,7 +83,7 @@ async def on_guild_join(guild):
 
 
 # When new member joins guild
-@bot.event
+@bot.listen('on_member_join')
 async def on_member_join(member):
     # Add user to database
     if not member.bot:
@@ -340,7 +331,7 @@ async def create_buttonrole_error(ctx, error):
         )
 
 
-@bot.event
+@bot.listen('on_component')
 async def on_component(ctx: ComponentContext):
     react_role = my_database.find_reactrole(ctx.origin_message_id)
     if ctx.custom_id == "add":

@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
-from discord_slash import cog_ext
+from discord_slash import cog_ext, ComponentContext
 from bot import my_database
 from tabulate import tabulate
 from customEmbed import LadEmbed
-from xp_calculator import  XpCalculator
+from xp_calculator import XpCalculator
+from discord_slash.utils import manage_components
+from discord_slash.model import ButtonStyle
 
 # Initialise xp calculator
 level_xp_requirements = XpCalculator()
@@ -57,20 +59,19 @@ class General(commands.Cog):
             delete_after=2)
 
         await ctx.send(
-            'Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use \'£help\' '
-            'to get help')
+            'Hello there. I am a bot created by <@!769880558322188298>, and I am here to help! Please use / to get started!')
 
     @cog_ext.cog_slash(
         name='rank',
         description='Get a user\'s current xp',
         options=[
-                    {
-                        'name': 'user',
-                        "description": 'User to rank',
-                        "type": 6,
-                        "required": False
-                     }
-                ]
+            {
+                'name': 'user',
+                "description": 'User to rank',
+                "type": 6,
+                "required": False
+            }
+        ]
     )
     async def rank(self, ctx, user: discord.User = None):
         global level_xp_requirements
@@ -94,8 +95,10 @@ class General(commands.Cog):
         # if level requirements haven't been created
         current_level_number = level_xp_requirements.calculate_current_level(current_xp)
 
-        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements.calculate_xp_for_level(current_level_number + 1) - \
-                                                          level_xp_requirements.calculate_xp_for_level(current_level_number)
+        total_xp_to_go_from_current_level_to_next_level = level_xp_requirements.calculate_xp_for_level(
+            current_level_number + 1) - \
+                                                          level_xp_requirements.calculate_xp_for_level(
+                                                              current_level_number)
 
         xp_on_current_level = current_xp - level_xp_requirements.calculate_xp_for_level(current_level_number)
 
@@ -131,22 +134,90 @@ class General(commands.Cog):
 
     @cog_ext.cog_slash(
         name='levels',
-        description='Get leaderboard of top 10 users',
-        options=[
-            {
-                'name': 'user_count',
-                "description": "Number of users to rank in leaderboard",
-                "type": 4,
-                "required": False
-            }
-        ]
-                       )
-    async def levels(self, ctx, user_count: int = 10):
+        description='Get leaderboard of top 10 users')
+    async def levels(self, ctx):
+
+        def create_leaderboard_button_actionrow(is_first_page: bool, is_last_page: bool) -> dict:
+            buttons = [
+                manage_components.create_button(
+                    style=ButtonStyle.blue,
+                    label='⬅ ️Previous Page',
+                    custom_id="Previous",
+                    disabled=is_first_page
+                ),
+                manage_components.create_button(
+                    style=ButtonStyle.blue,
+                    label='Next Page ➡',
+                    custom_id="Next",
+                    disabled=is_last_page
+                ),
+                manage_components.create_button(
+                    style=ButtonStyle.blue,
+                    label='🔄 Reload 🔄',
+                    custom_id="Reload",
+                ),
+                manage_components.create_button(
+                    style=ButtonStyle.red,
+                    label='Delete',
+                    custom_id='Delete'
+                ),
+            ]
+            return manage_components.create_actionrow(*buttons)
+
         if ctx.guild is None:
             return
-        leader_board_list = []
+
+        action_row = create_leaderboard_button_actionrow(True, False)
         all_guild_accounts = self.my_database.get_all_from_guild(ctx.guild.id)
-        for i in range(user_count):
+        leaderboard = await self.get_leaderboard(all_guild_accounts, 1, 10)
+        first_place = 1
+        last_place = 10
+        await ctx.send(f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```', components=[action_row])
+
+        while True:
+            button_ctx: ComponentContext = await manage_components.wait_for_component(self.bot, components=action_row)
+            print(button_ctx.origin_message)
+            all_guild_accounts = self.my_database.get_all_from_guild(ctx.guild.id)
+            if button_ctx.custom_id == 'Previous':
+                first_place -= 10
+                last_place -= 10
+                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
+                if first_place == 1:
+                    action_row = create_leaderboard_button_actionrow(True, False)
+                else:
+                    action_row = create_leaderboard_button_actionrow(False, False)
+                try:
+                    await button_ctx.edit_origin(content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
+                                             components=[action_row])
+                except discord.errors.NotFound as e:
+                    print(e.text, e.code)
+            elif button_ctx.custom_id == 'Next':
+                first_place += 10
+                last_place += 10
+                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
+                if len(all_guild_accounts) <= last_place:
+                    action_row = create_leaderboard_button_actionrow(False, True)
+                else:
+                    action_row = create_leaderboard_button_actionrow(False, False)
+                try:
+                    await button_ctx.edit_origin(content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
+                                             components=[action_row])
+                except discord.errors.NotFound:
+                    print("Not found error!")
+            elif button_ctx.custom_id == 'Reload':
+                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
+                try:
+                    await button_ctx.edit_origin(content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
+                                             components=button_ctx.origin_message.components)
+                except discord.errors.NotFound:
+                    print("Not found error!")
+            elif button_ctx.custom_id == 'Delete':
+                await button_ctx.origin_message.delete()
+
+
+    async def get_leaderboard(self, all_guild_accounts, first_place, last_place):
+        leader_board_list = []
+        for i in range(first_place - 1, last_place):
             try:
 
                 temp_user = await self.bot.fetch_user(all_guild_accounts[i][0])
@@ -163,8 +234,7 @@ class General(commands.Cog):
 
         # Convert leaderboard to ascii
         leaderboard = tabulate(leader_board_list, headers=["Standing", "Username", "Xp"], tablefmt="fancy_grid")
-
-        await ctx.send(f'**{ctx.guild.name}**\'s Top 10:\n```' + leaderboard + '```')
+        return leaderboard
 
 
 def setup(bot):

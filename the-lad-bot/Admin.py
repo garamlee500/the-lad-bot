@@ -6,8 +6,6 @@ from bot import my_database
 from tabulate import tabulate
 from discord.ext.commands import has_permissions
 from bot import autorole_apply
-from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.model import ButtonStyle
 
 class Admin(commands.Cog):
 
