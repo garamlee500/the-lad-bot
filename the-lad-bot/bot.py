@@ -201,6 +201,9 @@ async def on_message(message):
         if level_xp_requirements.calculate_current_level(previous_xp) < level_xp_requirements.calculate_current_level(
                 current_xp):
 
+            # apply autorole
+            await autorole_apply(message.guild)
+
             try:
                 rank_channel_id = my_database.get_rank_channel(message.guild.id)[0][0]
                 rank_channel = bot.get_channel(rank_channel_id)
@@ -213,8 +216,6 @@ async def on_message(message):
             embed_to_send.title = 'Level up'
             embed_to_send.description = f'GG <@!{message.author.id}>, you just advanced to level {level_xp_requirements.calculate_current_level(current_xp)}! '
 
-            # apply autorole
-            await autorole_apply(message.guild)
             # if user has an avatar thats not default
             if message.author.avatar:
                 # get image link
