@@ -7,6 +7,7 @@ from customEmbed import LadEmbed
 from xp_calculator import XpCalculator
 from discord_slash.utils import manage_components
 from discord_slash.model import ButtonStyle
+import uuid
 
 # Initialise xp calculator
 level_xp_requirements = XpCalculator()
@@ -26,29 +27,29 @@ def human_format(num):
                                                                       'Qt', 'Qd'][magnitude])
 
 
-def create_leaderboard_button_actionrow(is_first_page: bool, is_last_page: bool) -> dict:
+def create_leaderboard_button_actionrow(is_first_page: bool, is_last_page: bool, random_id) -> dict:
     buttons = [
         manage_components.create_button(
             style=ButtonStyle.blue,
             label='⬅ ️Previous Page',
-            custom_id="Previous",
+            custom_id="Previous" + random_id,
             disabled=is_first_page
         ),
         manage_components.create_button(
             style=ButtonStyle.blue,
             label='Next Page ➡',
-            custom_id="Next",
+            custom_id="Next" + random_id,
             disabled=is_last_page
         ),
         manage_components.create_button(
             style=ButtonStyle.blue,
             label='🔄 Reload 🔄',
-            custom_id="Reload",
+            custom_id="Reload" + random_id,
         ),
         manage_components.create_button(
             style=ButtonStyle.red,
             label='Delete',
-            custom_id='Delete'
+            custom_id='Delete' + random_id
         ),
     ]
     return manage_components.create_actionrow(*buttons)
@@ -160,84 +161,3 @@ class General(commands.Cog):
         embed_to_send.set_image(url=image_url)
         await ctx.send(embed=embed_to_send)
 
-    @cog_ext.cog_slash(
-        name='levels',
-        description='Get leaderboard of top 10 users')
-    async def levels(self, ctx):
-
-        if ctx.guild is None:
-            return
-
-        action_row = create_leaderboard_button_actionrow(True, False)
-        all_guild_accounts = self.my_database.get_all_from_guild(ctx.guild.id)
-        leaderboard = await self.get_leaderboard(all_guild_accounts, 1, 10)
-        first_place = 1
-        last_place = 10
-        await ctx.send(f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```', components=[action_row])
-
-        while True:
-            button_ctx: ComponentContext = await manage_components.wait_for_component(self.bot, components=action_row)
-            all_guild_accounts = self.my_database.get_all_from_guild(ctx.guild.id)
-            if button_ctx.custom_id == 'Previous':
-                first_place -= 10
-                last_place -= 10
-                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
-                if first_place == 1:
-                    action_row = create_leaderboard_button_actionrow(True, False)
-                else:
-                    action_row = create_leaderboard_button_actionrow(False, False)
-                try:
-                    await button_ctx.edit_origin(
-                        content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
-                        components=[action_row])
-                except discord.errors.NotFound as e:
-                    print(e.text, e.code)
-            elif button_ctx.custom_id == 'Next':
-                first_place += 10
-                last_place += 10
-                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
-                if len(all_guild_accounts) <= last_place:
-                    action_row = create_leaderboard_button_actionrow(False, True)
-                else:
-                    action_row = create_leaderboard_button_actionrow(False, False)
-                try:
-                    await button_ctx.edit_origin(
-                        content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
-                        components=[action_row])
-                except discord.errors.NotFound:
-                    print("Not found error!")
-            elif button_ctx.custom_id == 'Reload':
-                leaderboard = await self.get_leaderboard(all_guild_accounts, first_place, last_place)
-                try:
-                    await button_ctx.edit_origin(
-                        content=f'**{ctx.guild.name}**\'s Leaderboard:\n```' + leaderboard + '```',
-                        components=button_ctx.origin_message.components)
-                except discord.errors.NotFound:
-                    print("Not found error!")
-            elif button_ctx.custom_id == 'Delete':
-                await button_ctx.origin_message.delete()
-
-    async def get_leaderboard(self, all_guild_accounts, first_place, last_place):
-        leader_board_list = []
-        for i in range(first_place - 1, last_place):
-            try:
-
-                temp_user = self.bot.get_user(all_guild_accounts[i][0])
-
-                standing = (str(i + 1))
-                # get user name
-                temp_username = (temp_user.name + '#' + temp_user.discriminator)
-                xp_amount = (human_format(all_guild_accounts[i][1]))
-
-                # Add to list of users
-                leader_board_list.append([standing, temp_username, xp_amount])
-            except IndexError:
-                break
-
-        # Convert leaderboard to ascii
-        leaderboard = tabulate(leader_board_list, headers=["Standing", "Username", "Xp"], tablefmt="fancy_grid")
-        return leaderboard
-
-
-def setup(bot):
-    bot.add_cog(General(bot))
