@@ -193,5 +193,3 @@ class Database:
         cur = self.conn.cursor()
         cur.execute(sql, (guild_id,))
         self.conn.commit()
-
-

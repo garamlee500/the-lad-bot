@@ -74,7 +74,7 @@ async def on_guild_join(guild):
         await guild.system_channel.send(welcome)
 
     # Get all members of guild
-    members = await guild.fetch_members(limit=150).flatten()
+    members = guild.members
 
     # Add all members to database, if they are not bot
     for member in members:
@@ -123,7 +123,7 @@ async def autorole_apply(guild):
             if member[1] >= xp_for_autorole:
 
                 # get discord.Member object of that member
-                member = await guild.fetch_member(member[0])
+                member = guild.get_member(member[0])
 
                 # If they are a real member and aren't a bot
                 if member and not member.bot:
@@ -223,50 +223,6 @@ async def on_message(message):
             embed_to_send.set_image(url=image_url)
             await rank_channel.send(embed=embed_to_send)
 
-'''
-@bot.listen('on_raw_reaction_add')
-async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
-    react_role = my_database.find_reactrole(payload.message_id)
-    guild = bot.get_guild(payload.guild_id)
-
-    if react_role:
-        role_to_add = guild.get_role(react_role[0][1])
-
-        member = guild.get_member(payload.user_id)
-        if not member.bot:
-            await member.add_roles(role_to_add, reason='Reacted to message')
-
-
-# We have to use raw reactions as the normal method doesn't work if the bot restarts
-# As the internal message cache is cleared
-@bot.listen('on_raw_reaction_remove')
-async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
-    react_role = my_database.find_reactrole(payload.message_id)
-
-    if not react_role:
-        return
-
-    all_reactions_removed = True
-
-    guild = bot.get_guild(payload.guild_id)
-    user = guild.get_member(payload.user_id)
-    channel = bot.get_channel(payload.channel_id)
-    message = await channel.fetch_message(payload.message_id)
-
-    reactors = await message.reactions[0].users().flatten()
-
-    # Check if user has removed ALL their reactions from the message
-    for reactor in reactors:
-        if reactor.id == user.id:
-            all_reactions_removed = False
-            break
-
-    if all_reactions_removed:
-        role_to_add = guild.get_role(react_role[0][1])
-        await user.remove_roles(role_to_add, reason='Unreacted from message')
-
-'''
-
 
 @slash.slash(
     name="create_buttonrole",
@@ -319,6 +275,8 @@ async def create_buttonrole(ctx: SlashContext, message: str, role: discord.Role,
         sent_message.id,
         role.id
     )
+
+
 @create_buttonrole.error
 async def create_buttonrole_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
