@@ -171,8 +171,11 @@ class General(commands.Cog):
             return
 
         random_id = str(uuid.uuid1())
-        action_row = create_leaderboard_button_actionrow(True, False, random_id)
         all_guild_accounts = self.my_database.get_all_from_guild(ctx.guild.id)
+        if len(all_guild_accounts) > 10:
+            action_row = create_leaderboard_button_actionrow(True, False, random_id)
+        else:
+            action_row = create_leaderboard_button_actionrow(True, True, random_id)
         leaderboard = await self.get_leaderboard(all_guild_accounts, 1, 10)
         first_place = 1
         last_place = 10
