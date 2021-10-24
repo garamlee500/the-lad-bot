@@ -2,6 +2,7 @@ import discord
 from datetime import datetime
 
 from discord.ext.commands import has_permissions
+from discord_slash.utils import manage_components
 from discord_slash.utils.manage_components import create_actionrow, create_button
 
 from database_accessor import Database
@@ -135,16 +136,36 @@ async def autorole_apply(guild):
                         print(e)
 
 
+
 @slash.slash(name="inspiro",
              description='Generate a quote from inspirobot.me')
 async def inspiro(ctx: SlashContext):
-    inspiro_image_url = requests.get('https://inspirobot.me/api?generate=true&oy=vey').text
+
     embed_to_return = LadEmbed()
     embed_to_return.title = 'Inspirobot quote'
     embed_to_return.description = 'An auto-generated quote from the official Inspirobot api'
-    embed_to_return.set_image(url=inspiro_image_url)
-    await ctx.send(embed=embed_to_return)
 
+    buttons = [
+        manage_components.create_button(
+            style=ButtonStyle.blue,
+            label='🔄 Reload 🔄',
+            custom_id="Reload",
+        )
+    ]
+    action_row = create_actionrow(*buttons)
+
+    inspiro_image_url = requests.get('https://inspirobot.me/api?generate=true&oy=vey').text
+    embed_to_return.set_image(url=inspiro_image_url)
+
+    await ctx.send(embed=embed_to_return, components=[action_row])
+
+    while True:
+        button_ctx: ComponentContext = await manage_components.wait_for_component(bot, components=action_row)
+
+        if button_ctx.custom_id == "Reload":
+            inspiro_image_url = requests.get('https://inspirobot.me/api?generate=true&oy=vey').text
+            embed_to_return.set_image(url=inspiro_image_url)
+            await button_ctx.edit_origin(embed=embed_to_return)
 
 # When bot receives message
 @bot.listen('on_message')
