@@ -1,3 +1,5 @@
+import io
+
 import discord
 from datetime import datetime
 
@@ -58,6 +60,25 @@ level_xp_requirements = XpCalculator()
 async def on_ready():
     time_info = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print(f'We have logged in as {bot.user.name} on {time_info}')
+
+    FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
+    sent_fish_gaming_wednesday = False
+    fishy_video = requests.get(
+        "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4"
+    ).content
+    fishy_file = discord.File(fp=io.BytesIO(fishy_video), filename='fishgaminwensday.mp4')
+
+    while True:
+        current_time = datetime.now()
+
+        if not sent_fish_gaming_wednesday and current_time.weekday() == 2 and current_time.hour >=6:
+            await bot.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(file=fishy_file)
+            sent_fish_gaming_wednesday = True
+
+        elif sent_fish_gaming_wednesday and current_time.weekday() == 3:
+            sent_fish_gaming_wednesday = False
+
+        time.sleep(60)
 
 
 # When bot joins a guild
