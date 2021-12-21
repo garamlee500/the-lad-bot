@@ -229,14 +229,14 @@ class General(commands.Cog):
             try:
 
                 temp_user = self.bot.get_user(all_guild_accounts[i][0])
+                if temp_user:
+                    standing = (str(i + 1))
+                    # get user name
+                    temp_username = (temp_user.name + '#' + temp_user.discriminator)
+                    xp_amount = (human_format(all_guild_accounts[i][1]))
 
-                standing = (str(i + 1))
-                # get user name
-                temp_username = (temp_user.name + '#' + temp_user.discriminator)
-                xp_amount = (human_format(all_guild_accounts[i][1]))
-
-                # Add to list of users
-                leader_board_list.append([standing, temp_username, xp_amount])
+                    # Add to list of users
+                    leader_board_list.append([standing, temp_username, xp_amount])
             except IndexError:
                 break
 

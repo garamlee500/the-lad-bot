@@ -1,3 +1,5 @@
+import asyncio
+
 import io
 
 import discord
@@ -61,6 +63,11 @@ async def on_ready():
     time_info = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print(f'We have logged in as {bot.user.name} on {time_info}')
 
+
+    await fishy_time()
+
+
+async def fishy_time():
     FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
     sent_fish_gaming_wednesday = False
     fishy_video = requests.get(
@@ -78,8 +85,7 @@ async def on_ready():
         elif sent_fish_gaming_wednesday and current_time.weekday() == 3:
             sent_fish_gaming_wednesday = False
 
-        time.sleep(60)
-
+        await asyncio.sleep(60)
 
 # When bot joins a guild
 @bot.listen('on_guild_join')
