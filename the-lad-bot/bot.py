@@ -1,3 +1,5 @@
+import random
+
 import asyncio
 
 import io
@@ -66,10 +68,19 @@ async def on_ready():
 
     await fishy_time()
 
+sent_fish_gaming_wednesday = False
+
+
+@bot.listen('on_typing')
+async def on_typing(channel: discord.abc.Messageable, user: discord.User, when):
+    ran_num = random.randint(1, 1000)
+    if ran_num == 1:
+        await user.send("Surprise! I saw you typing and thought I'd give you a gift!\n"
+                        'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
 
 async def fishy_time():
+    global sent_fish_gaming_wednesday
     FISH_GAMING_WEDNESDAY_CHANNEL_ID = 765245461505245267
-    sent_fish_gaming_wednesday = False
     fishy_video = requests.get(
         "https://cdn.discordapp.com/attachments/765245461505245267/834510823787200552/fishgaminwensday.mp4"
     ).content
