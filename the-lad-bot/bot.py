@@ -90,8 +90,8 @@ async def fishy_time():
         current_time = datetime.now()
 
         if not sent_fish_gaming_wednesday and current_time.weekday() == 2 and current_time.hour >=6:
-            await bot.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(file=fishy_file)
             sent_fish_gaming_wednesday = True
+            await bot.get_channel(FISH_GAMING_WEDNESDAY_CHANNEL_ID).send(file=fishy_file)
 
         elif sent_fish_gaming_wednesday and current_time.weekday() == 3:
             sent_fish_gaming_wednesday = False
